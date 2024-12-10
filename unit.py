@@ -1,13 +1,14 @@
 import pygame
 import random
+from unit import *
 
 # Constantes
-GRID_SIZE = 8
-CELL_SIZE = 60
-WIDTH = GRID_SIZE * CELL_SIZE
-HEIGHT = GRID_SIZE * CELL_SIZE
+GRID_SIZE = 10  # la taille de la grille
+CELL_SIZE = 60  #la taille de la cellule
+WIDTH = GRID_SIZE * CELL_SIZE   #la largeur de la grille
+HEIGHT = GRID_SIZE * CELL_SIZE  #la haiteur de la grille
 FPS = 30
-WHITE = (255, 255, 255)
+WHITE = (255, 255, 255)  
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
@@ -15,38 +16,9 @@ GREEN = (0, 255, 0)
 
 
 class Unit:
-    """
-    Classe pour représenter une unité.
-
-    ...
-    Attributs
-    ---------
-    x : int
-        La position x de l'unité sur la grille.
-    y : int
-        La position y de l'unité sur la grille.
-    health : int
-        La santé de l'unité.
-    attack_power : int
-        La puissance d'attaque de l'unité.
-    team : str
-        L'équipe de l'unité ('player' ou 'enemy').
-    is_selected : bool
-        Si l'unité est sélectionnée ou non.
-
-    Méthodes
-    --------
-    move(dx, dy)
-        Déplace l'unité de dx, dy.
-    attack(target)
-        Attaque une unité cible.
-    draw(screen)
-        Dessine l'unité sur la grille.
-    """
-
-    def __init__(self, x, y, health, attack_power, team):
+    def __init__(self, x, y, image_path):
         """
-        Construit une unité avec une position, une santé, une puissance d'attaque et une équipe.
+        Initialise une unité avec une position et une image spécifique.
 
         Paramètres
         ----------
@@ -54,36 +26,57 @@ class Unit:
             La position x de l'unité sur la grille.
         y : int
             La position y de l'unité sur la grille.
-        health : int
-            La santé de l'unité.
-        attack_power : int
-            La puissance d'attaque de l'unité.
-        team : str
-            L'équipe de l'unité ('player' ou 'enemy').
+        image_path : str
+            Le chemin de l'image pour cette unité.
         """
         self.x = x
         self.y = y
-        self.health = health
-        self.attack_power = attack_power
-        self.team = team  # 'player' ou 'enemy'
-        self.is_selected = False
+        self.image = pygame.image.load(image_path)  #charger l'image
+        self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))#mise à l'échelle l'image pour qu'elle soit centré
 
     def move(self, dx, dy):
-        """Déplace l'unité de dx, dy."""
+        """Déplacement de  l'unité de dx, dy."""
         if 0 <= self.x + dx < GRID_SIZE and 0 <= self.y + dy < GRID_SIZE:
             self.x += dx
             self.y += dy
 
-    def attack(self, target):
-        """Attaque une unité cible."""
-        if abs(self.x - target.x) <= 1 and abs(self.y - target.y) <= 1:
-            target.health -= self.attack_power
-
     def draw(self, screen):
-        """Affiche l'unité sur l'écran."""
-        color = BLUE if self.team == 'player' else RED
-        if self.is_selected:
-            pygame.draw.rect(screen, GREEN, (self.x * CELL_SIZE,
-                             self.y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-        pygame.draw.circle(screen, color, (self.x * CELL_SIZE + CELL_SIZE //
-                           2, self.y * CELL_SIZE + CELL_SIZE // 2), CELL_SIZE // 3)
+        """Dessine l'unité sur la grille à une position donner."""
+        position = (self.x * CELL_SIZE, self.y * CELL_SIZE)
+        screen.blit(self.image, position)
+
+
+# Classe Player hérité de la classe unit 
+class Player(Unit):
+    def __init__(self, x, y, character_type):
+        """
+        Initialise un joueur avec une position et un type de personnage.
+
+        character_type  désigne quelle personnage parmi les 3('naruto', 'uchiwa', 'haruno').
+        """
+        image_map = {
+            "naruto": "naruto.png",
+            "uchiwa": "uchiwa.png",
+            "haruno": "haruno.png"
+        }
+        image_path = image_map.get(character_type, "default.png")
+        super().__init__(x, y, image_path)
+
+
+# Classe Enemy hérité de la classe unit
+class Enemy(Unit):
+    def __init__(self, x, y, character_name):
+        """
+        Initialise un ennemi avec une position fixe et une image spécifique.
+         character_type  désigne quelle personnage parmi les 3('itachi', 'madara', 'zabuza').
+        """
+        # On associe l'image en fonction du nom de l'ennemi
+        image_map = {
+            "itachi": "itachi.png",
+            "madara": "madara.png",
+            "zabuza": "zabuza.png"
+        }
+        image_path = image_map.get(character_name, "default.png")
+        super().__init__(x, y, image_path)
+
+

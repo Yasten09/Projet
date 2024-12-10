@@ -1,138 +1,140 @@
 import pygame
 import random
+from unit import*
 
-from unit import *
+
 
 
 class Game:
-    """
-    Classe pour représenter le jeu.
-
-    ...
-    Attributs
-    ---------
-    screen: pygame.Surface
-        La surface de la fenêtre du jeu.
-    player_units : list[Unit]
-        La liste des unités du joueur.
-    enemy_units : list[Unit]
-        La liste des unités de l'adversaire.
-    """
-
     def __init__(self, screen):
         """
-        Construit le jeu avec la surface de la fenêtre.
-
-        Paramètres
-        ----------
-        screen : pygame.Surface
-            La surface de la fenêtre du jeu.
+        Initialise le jeu avec une surface de fenêtre et les unités.
         """
         self.screen = screen
-        self.player_units = [Unit(0, 0, 10, 2, 'player'),
-                             Unit(1, 0, 10, 2, 'player'),
-                             Unit(2, 0, 10, 2, 'player' )]
+        self.turn = 'player'  # le joueur commence le tours
+        self.enemy_turn_index = 0  # L'indice de l'ennemi qui va jouer en premier(0, 1, 2)
 
-        self.enemy_units = [Unit(6, 6, 8, 1, 'enemy'),
-                            Unit(7, 6, 8, 1, 'enemy'),
-                            Unit(5, 6 , 8, 1, 'enemy')]
+        # Créer mes 3 joueurs avec leurs types
+        self.players = [
+            Player(0, 0, "naruto"),
+            Player(1, 0, "uchiwa"),
+            Player(2, 0, "haruno")
+        ]
 
-    def handle_player_turn(self):
-        """Tour du joueur"""
-        for selected_unit in self.player_units:
+        # Créer les ennemis avec les images personnalisées
+        self.enemies = [
+            Enemy(7, 7, "itachi"),
+            Enemy(8, 7, "madara"),
+            Enemy(9, 7, "zabuza")
+        ]
 
-            # Tant que l'unité n'a pas terminé son tour
-            has_acted = False
-            selected_unit.is_selected = True
-            self.flip_display()
-            while not has_acted:
+        # Combiner tous les personnages
+        self.units = self.players + self.enemies
 
-                # Important: cette boucle permet de gérer les événements Pygame
-                for event in pygame.event.get():
+    def get_move(self, event):
+        """Gère les déplacements des joueur"""
+        if event.type == pygame.KEYDOWN and self.turn == 'player':
+            # le 1er joueur deplace avec les touche( H:gauche, K:droite, U:haut, N:bas)
+            if event.key == pygame.K_h:
+                self.players[0].move(-1, 0)
+            elif event.key == pygame.K_k:
+                self.players[0].move(1, 0)
+            elif event.key == pygame.K_u:
+                self.players[0].move(0, -1)
+            elif event.key == pygame.K_n:
+                self.players[0].move(0, 1)
 
-                    # Gestion de la fermeture de la fenêtre
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        exit()
+            # le 2eme joueur deplace avec les touche( 1:gauche, 2:droite, 3:haut, 4:bas)
+            elif event.key == pygame.K_1:
+                self.players[1].move(-1, 0)
+            elif event.key == pygame.K_2:
+                self.players[1].move(1, 0)
+            elif event.key == pygame.K_3:
+                self.players[1].move(0, -1)
+            elif event.key == pygame.K_4:
+                self.players[1].move(0, 1)
 
-                    # Gestion des touches du clavier
-                    if event.type == pygame.KEYDOWN:
+            # le 3eme joueur deplace avec les fléches
+            elif event.key == pygame.K_LEFT:
+                self.players[2].move(-1, 0)
+            elif event.key == pygame.K_RIGHT:
+                self.players[2].move(1, 0)
+            elif event.key == pygame.K_UP:
+                self.players[2].move(0, -1)
+            elif event.key == pygame.K_DOWN:
+                self.players[2].move(0, 1)
 
-                        # Déplacement (touches fléchées)
-                        dx, dy = 0, 0
-                        if event.key == pygame.K_LEFT:
-                            dx = -1
-                        elif event.key == pygame.K_RIGHT:
-                            dx = 1
-                        elif event.key == pygame.K_UP:
-                            dy = -1
-                        elif event.key == pygame.K_DOWN:
-                            dy = 1
+            # gestion de tour
+            self.turn = 'enemy'  # les joueur et les ennemis jouent par tours
 
-                        selected_unit.move(dx, dy)
-                        self.flip_display()
+    def move_enemy(self, enemy):
+        """Déplacement des ennemis de manière aléatoire."""
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        dx, dy = random.choice(directions)
+        enemy.move(dx, dy)
 
-                        # Attaque (touche espace) met fin au tour
-                        if event.key == pygame.K_SPACE:
-                            for enemy in self.enemy_units:
-                                if abs(selected_unit.x - enemy.x) <= 1 and abs(selected_unit.y - enemy.y) <= 1:
-                                    selected_unit.attack(enemy)
-                                    if enemy.health <= 0:
-                                        self.enemy_units.remove(enemy)
+    def update_enemy_positions(self):
+        """la mise a jour de la position des ennemis"""
+        if self.enemy_turn_index < len(self.enemies):
+            enemy = self.enemies[self.enemy_turn_index]
+            self.move_enemy(enemy)
 
-                            has_acted = True
-                            selected_unit.is_selected = False
-
-    def handle_enemy_turn(self):
-        """IA très simple pour les ennemis."""
-        for enemy in self.enemy_units:
-
-            # Déplacement aléatoire
-            target = random.choice(self.player_units)
-            dx = 1 if enemy.x < target.x else -1 if enemy.x > target.x else 0
-            dy = 1 if enemy.y < target.y else -1 if enemy.y > target.y else 0
-            enemy.move(dx, dy)
-
-            # Attaque si possible
-            if abs(enemy.x - target.x) <= 1 and abs(enemy.y - target.y) <= 1:
-                enemy.attack(target)
-                if target.health <= 0:
-                    self.player_units.remove(target)
+    def next_enemy_turn(self):
+        """Passe au tour suivant pour l'ennemi."""
+        self.enemy_turn_index += 1
+        if self.enemy_turn_index >= len(self.enemies):
+            self.enemy_turn_index = 0  # Recommence à partir du premier ennemi
 
     def flip_display(self):
         """Affiche le jeu."""
+        self.screen.fill(BLACK)
 
         # Affiche la grille
-        self.screen.fill(BLACK)
         for x in range(0, WIDTH, CELL_SIZE):
             for y in range(0, HEIGHT, CELL_SIZE):
                 rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
                 pygame.draw.rect(self.screen, WHITE, rect, 1)
 
         # Affiche les unités
-        for unit in self.player_units + self.enemy_units:
+        for unit in self.units:
             unit.draw(self.screen)
 
-        # Rafraîchit l'écran
         pygame.display.flip()
 
+    def handle_enemy_turn(self):
+        """Permet aux ennemis de jouer un à un après le tour du joueur."""
+        if self.turn == 'enemy':
+            self.update_enemy_positions()
+            self.next_enemy_turn()  # Passe à l'ennemi suivant après son mouvement
+            self.turn = 'player'  # Après que tous les ennemis aient joué, on passe au tour du joueur
 
+
+# Fonction principale
 def main():
-
-    # Initialisation de Pygame
     pygame.init()
-
-    # Instanciation de la fenêtre
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Mon jeu de stratégie")
 
-    # Instanciation du jeu
     game = Game(screen)
 
-    # Boucle principale du jeu
-    while True:
-        game.handle_player_turn()
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            # Si c'est le tour du joueur, on gère les déplacements
+            game.get_move(event)
+
+        # Si c'est le tour des ennemis, on les fait jouer un à un
         game.handle_enemy_turn()
+
+        # Affiche les nouvelles positions des unités
+        game.flip_display()
+
+        
+
+    pygame.quit()
 
 
 if __name__ == "__main__":
