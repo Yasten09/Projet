@@ -68,14 +68,21 @@ class Unit:
         self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))
 
     def move(self, dx, dy):
-        """Déplace l'unité sur la grille."""
-        if self.remaining_move>0 :
-            if 0 <= self.x + dx < GRID_SIZE and 0 <= self.y + dy < GRID_SIZE:
-                distance=abs(dx)+abs(dy)
-                if distance<=self.remaining_move :
-                    self.x += dx
-                    self.y += dy
+        """Déplace l'unité sur la grille, sauf si la case cible est inaccessible."""
+        INACCESSIBLE_TILES = [(6, 0), (6, 1), (6, 2),(6, 3),(6, 4),(7, 0),(7, 1), (7, 2),(7, 3),(7, 4),(7, 5),(7,7),(8,5),(8, 7),(8, 8),(8, 9),(9,8),(9,9),(9, 10),(9, 11),(9, 12),(9, 14),(9, 15),(10,8),(10,9),(10, 10),(10, 11),(10, 12),(10, 14),(10, 15)]
+        if self.remaining_move > 0:
+            new_x = self.x + dx
+            new_y = self.y + dy
+
+            # Vérifie si la case cible est dans les limites et n'est pas interdite
+            if (0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE) and (new_x, new_y) not in INACCESSIBLE_TILES :
+                distance = abs(dx) + abs(dy)
+                if distance <= self.remaining_move:
+                    self.x = new_x
+                    self.y = new_y
                     self.remaining_move -= distance  # Décrémenter le nombre de déplacements restants
+                else:
+                    print(f"Case ({new_x}, {new_y}) inaccessible.")
 
     def draw(self, screen):
         """Affiche l'unité à l'écran."""
@@ -191,7 +198,7 @@ class Game:
                         exit()
 
                     if event.type == pygame.KEYDOWN:
-                        dx, dy = 0, 0
+                        dx, dy = 0, 0   
                         if event.key == pygame.K_LEFT:
                             dx = -1
                         elif event.key == pygame.K_RIGHT:
@@ -200,8 +207,11 @@ class Game:
                             dy = -1
                         elif event.key == pygame.K_DOWN:
                             dy = 1
-
+                            
                         selected_unit.move(dx, dy)
+                        if selected_unit.x==2 and selected_unit.y==2:
+                            selected_unit.move(-dx,-dy)
+
                         self.flip_display()
                         if event.key == pygame.K_s or event.key == pygame.K_SPACE:
                             if event.key == pygame.K_s and selected_unit.competences:
@@ -424,8 +434,11 @@ class CompetenceSelector:
                         pathimage="MenuChoix/UchiwaChoose.jpg"
                     if unit.character_type=="haruno":
                         pathimage= "MenuChoix/HarunoChoose.jpg"    
-                    if unit.character_type=="itachi.jpg": 
-                        pathimage= "MenuChoix/ItachiChoose"    
+                    if unit.character_type=="itachi": 
+                        pathimage= "MenuChoix/ItachiChoose.jpg" 
+                    if unit.character_type=="madara": 
+                        pathimage= "MenuChoix/MadaraChoose.png"    
+       
 
                     
                     
@@ -465,6 +478,99 @@ class CompetenceSelector:
                                 else:
                                     print("Compétence déjà choisie, veuillez en sélectionner une autre.")
 
+
+class CharacterSelectionMenu:
+    """
+    Classe pour gérer la sélection des personnages pour chaque joueur.
+    """
+    def __init__(self, screen, available_characters, character_images, font_size=36):
+        """
+        Initialise le menu de sélection des personnages.
+        
+        Paramètres :
+        - screen : Surface Pygame pour l'affichage.
+        - available_characters : Liste des personnages disponibles.
+        - character_images : Dictionnaire associant chaque personnage à son image.
+        - font_size : Taille de la police utilisée pour afficher le texte.
+        """
+        self.screen = screen
+        self.available_characters = available_characters
+        self.character_images = character_images
+        self.font = pygame.font.Font(None, font_size)
+
+    def select_characters(self, player_name):
+        """
+        Permet à un joueur de sélectionner des personnages pour ses unités.
+        
+        Paramètres :
+        - player_name : Nom du joueur.
+        
+        Retourne :
+        - Une liste de noms de personnages sélectionnés.
+        """
+        #fond d'ecran 
+        imagea = pygame.image.load("images/FondNaruto2.webp")
+        imageb = pygame.transform.scale(imagea, (700, 700))
+        image_rect = imageb.get_rect(center=(WIDTH // 2, HEIGHT//2))
+        self.screen.blit(imageb, image_rect)
+        selected_characters = []
+        for i in range(2):  # Chaque joueur choisit 2 personnages
+            selecting = True
+            selected_index = 0  # Indice du personnage actuellement surligné
+
+            while selecting:
+            
+
+                # Afficher le titre
+                title_text = self.font.render(
+                    f"{player_name} - Sélectionnez le personnage {i + 1}", True, WHITE
+                )
+                self.screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, 50))
+
+                # Afficher chaque personnage avec son image et son nom
+                for index, character in enumerate(self.available_characters):
+                    x_pos = 100
+                    y_pos = 100 + index * 100
+
+                    # Afficher l'image du personnage
+                    character_image = self.character_images[character]
+                    image_rect = character_image.get_rect(topleft=(x_pos, y_pos))
+                    self.screen.blit(character_image, image_rect)
+
+                    # Afficher le nom du personnage
+                    color = GREEN if index == selected_index else WHITE
+                    character_text = self.font.render(character, True, WHITE)
+                    self.screen.blit(character_text, (x_pos + 120, y_pos + 50))
+
+                    # Encadrer l'image du personnage sélectionné
+                    if index == selected_index:
+                        pygame.draw.rect(self.screen, GREEN, image_rect, 3)
+                    else: pygame.draw.rect(self.screen, WHITE, image_rect, 3)
+
+                pygame.display.flip()
+
+                # Gérer les événements de navigation et sélection
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        exit()
+
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_UP and selected_index > 0:
+                            selected_index -= 1
+                        elif event.key == pygame.K_DOWN and selected_index < len(self.available_characters) - 1:
+                            selected_index += 1
+                        elif event.key == pygame.K_RETURN:  # Valider le personnage
+                            selected_character = self.available_characters[selected_index]
+                            if selected_character not in selected_characters:
+                                
+                                selected_characters.append(selected_character)
+                                print(f"{player_name} a choisi : {selected_character}")
+                                selecting = False
+                            else:
+                                print("Personnage déjà choisi, veuillez en sélectionner un autre.")
+        return selected_characters
+
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -476,6 +582,32 @@ if __name__ == "__main__":
     explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
     tir_precis = Competence(name="Tir précis", range=4, area=[(0, 0)])
     soin = Competence(name="Soin", range=2, area=[(0, 0)])
+
+    available_characters = ["naruto", "uchiwa", "haruno", "itachi","madara"]
+    character_images = {
+        "naruto": pygame.transform.scale(pygame.image.load("images/naruto.png"), (100, 100)),
+         "madara": pygame.transform.scale(pygame.image.load("images/madara.png"), (100, 100)),
+        "uchiwa": pygame.transform.scale(pygame.image.load("images/uchiwa.png"), (100, 100)),
+        "haruno": pygame.transform.scale(pygame.image.load("images/haruno.png"), (100, 100)),
+        "itachi": pygame.transform.scale(pygame.image.load("images/itachi.png"), (100, 100))
+    }
+
+    # Initialisation du menu de sélection des personnages
+    character_menu = CharacterSelectionMenu(screen, available_characters, character_images)
+
+    # Sélection des personnages pour chaque joueur
+    player1_characters = character_menu.select_characters("Player 1")
+    player2_characters = character_menu.select_characters("Player 2")
+    # Assignation des personnages choisis aux unités
+    for i, unit in enumerate(game.player1_units):
+        unit.character_type = player1_characters[i]
+        unit.image = pygame.image.load(f"images/{unit.character_type}.png")
+        unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))
+
+    for i, unit in enumerate(game.player2_units):
+        unit.character_type = player2_characters[i]
+        unit.image = pygame.image.load(f"images/{unit.character_type}.png")
+        unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))
     competences_disponibles = [explosion, tir_precis, soin]
 
     # Initialisation du sélecteur de compétences
@@ -487,16 +619,7 @@ if __name__ == "__main__":
     # Sélection des compétences pour Player 2
     competence_selector.choose_competences(game.player2_units, "Player 2")
 
-      # Lancer le jeu
+    # Lancer le jeu
     while True:
-        if not game.is_player_eliminated(game.player1_units):
-            game.handle_player_turn(game.player1_units, game.player2_units, "Player 1")
-        if not game.is_player_eliminated(game.player2_units):
-            game.handle_player_turn(game.player2_units, game.player1_units, "Player 2")
-        # Vérifiez si le jeu est terminé après chaque tour
-        game.check_game_over()
-
-        # Si le jeu est terminé, affichez le gagnant
-        if game.winner:
-            game.display_winner()
-            break
+        game.handle_player_turn(game.player1_units, game.player2_units, "Player 1")
+        game.handle_player_turn(game.player2_units, game.player1_units, "Player 2")
