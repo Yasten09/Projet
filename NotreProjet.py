@@ -2,10 +2,10 @@ import pygame
 import pytmx
 import random
 import time
-GRID_SIZE = 30
-long_SIZE = 30
-haut_SIZE = 25
-CELL_SIZE = 32
+GRID_SIZE = 20
+long_SIZE = 20
+haut_SIZE = 16
+CELL_SIZE = 48
 WIDTH = long_SIZE  * CELL_SIZE
 HEIGHT = haut_SIZE * CELL_SIZE
 FPS = 30
@@ -141,7 +141,7 @@ class Game:
 
         # Chargement de la carte Tiled (.tmx)
         try:
-            self.tmx_data = pytmx.load_pygame("ma_map.tmx")  # Remplacez par le chemin de votre fichier .tmx
+            self.tmx_data = pytmx.load_pygame("map2.tmx")  # Remplacez par le chemin de votre fichier .tmx
         except Exception as e:
             print(f"Erreur lors du chargement de la carte : {e}")
             self.tmx_data = None
@@ -304,7 +304,8 @@ class Game:
                 pygame.draw.rect(self.screen, WHITE, rect, 1)
 
         for unit in self.player1_units + self.player2_units:
-            unit.draw(self.screen)
+            if unit.health > 0:
+                unit.draw(self.screen)
 
         pygame.display.flip()
 
@@ -334,7 +335,8 @@ class Game:
                     pygame.draw.rect(self.screen, (50, 50, 200), rect, 1)
 
         for u in self.player1_units + self.player2_units:
-            u.draw(self.screen)
+            if unit.health > 0:
+                u.draw(self.screen)
 
         for dx, dy in competence.area:
             tx, ty = cx + dx, cy + dy
