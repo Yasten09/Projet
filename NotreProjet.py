@@ -54,7 +54,8 @@ class Unit:
         image_map = {
             "naruto": "images/naruto.png",
             "uchiwa": "images/uchiwa.png",
-            "haruno": "images/haruno.png"
+            "haruno": "images/haruno.png",
+            "madara": "images/madara.png"
         }
         image_path = image_map.get(self.character_type, "images/default.png")
 
@@ -123,6 +124,9 @@ class Game:
     """
     def __init__(self, screen):
         self.screen = screen
+        self.winner = None # Variable pour stocker l'équipe gagnante
+        
+
 
         # Définition des compétences
         explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
@@ -136,7 +140,7 @@ class Game:
 
         self.player2_units = [
             UnitWithHealthBar(6, 6, health=100, max_move=3, attack_power=15, team='player2', character_type="haruno", competences=[explosion]),
-            UnitWithHealthBar(7, 6, health=90, max_move=4, attack_power=30, team='player2', character_type="uchiwa", competences=[tir_precis])
+            UnitWithHealthBar(7, 6, health=90, max_move=4, attack_power=30, team='player2', character_type="madara", competences=[tir_precis])
         ]
 
         # Chargement de la carte Tiled (.tmx)
@@ -145,10 +149,36 @@ class Game:
         except Exception as e:
             print(f"Erreur lors du chargement de la carte : {e}")
             self.tmx_data = None
+    def check_game_over(self):
+        """Vérifie si le jeu est terminé et déclare un gagnant."""
+        if self.is_player_eliminated(self.player1_units):
+            self.winner = "Player 2"  # Player 2 gagne
+        elif self.is_player_eliminated(self.player2_units):
+            self.winner = "Player 1"  # Player 1 gagne
+    
+    def is_player_eliminated(self, player_units):
+        """Vérifie si toutes les unités du joueur sont éliminées."""
+        return all(unit.health <= 0 for unit in player_units)
+    
+    def display_winner(self):
+        """Affiche l'équipe gagnante."""
+        if self.winner:
+            font = pygame.font.Font(None, 36)
+            winner_text = font.render(f"{self.winner} wins!", True, (255, 255, 255))
+            self.screen.blit(winner_text, (WIDTH // 2 - winner_text.get_width() // 2, HEIGHT // 2))
+            pygame.display.flip()
+            pygame.time.wait(3000)  # Attendre 3 secondes avant de quitter
+            pygame.quit()
+            exit()
 
     def handle_player_turn(self, player_units, opponent_units, player_name):
         """Tour d'un joueur : déplacement et choix de zone pour attaquer."""
+        if self.is_player_eliminated(player_units):
+            print(f"{player_name} est éliminé, il ne peut plus jouer.")
+            return
         for selected_unit in player_units:
+            if selected_unit.health <= 0:  # Si l'unité est éliminée, passez à la suivante
+                continue
             selected_unit.remaining_move = selected_unit.max_move 
             has_acted = False
             selected_unit.is_selected = True
@@ -305,7 +335,7 @@ class Game:
 
         for unit in self.player1_units + self.player2_units:
             if unit.health > 0:
-                unit.draw(self.screen)
+               unit.draw(self.screen)
 
         pygame.display.flip()
 
@@ -335,7 +365,7 @@ class Game:
                     pygame.draw.rect(self.screen, (50, 50, 200), rect, 1)
 
         for u in self.player1_units + self.player2_units:
-            if unit.health > 0:
+            if u.health > 0:
                 u.draw(self.screen)
 
         for dx, dy in competence.area:
@@ -457,7 +487,16 @@ if __name__ == "__main__":
     # Sélection des compétences pour Player 2
     competence_selector.choose_competences(game.player2_units, "Player 2")
 
-    # Lancer le jeu
+      # Lancer le jeu
     while True:
-        game.handle_player_turn(game.player1_units, game.player2_units, "Player 1")
-        game.handle_player_turn(game.player2_units, game.player1_units, "Player 2")
+        if not game.is_player_eliminated(game.player1_units):
+            game.handle_player_turn(game.player1_units, game.player2_units, "Player 1")
+        if not game.is_player_eliminated(game.player2_units):
+            game.handle_player_turn(game.player2_units, game.player1_units, "Player 2")
+        # Vérifiez si le jeu est terminé après chaque tour
+        game.check_game_over()
+
+        # Si le jeu est terminé, affichez le gagnant
+        if game.winner:
+            game.display_winner()
+            break
