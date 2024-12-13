@@ -37,7 +37,7 @@ class Unit:
     """
     Classe pour représenter une unité avec des images.
     """
-    def __init__(self, x, y, max_move, health, attack_power, team, character_type, competences=None):
+    def __init__(self, x, y, max_health,max_move,remaining_move, health, attack_power, team, character_type, competences=None):
         self.x = x
         self.y = y
         self.health = health
@@ -49,6 +49,7 @@ class Unit:
         self.is_selected = False
         self.character_type = character_type
         self.competences = competences or []
+        
 
         # Chargement de l'image du personnage
         image_map = {
@@ -106,6 +107,14 @@ class Unit:
 
 
 class UnitWithHealthBar(Unit):
+    def __init__(self, x, y, health, max_health, remaining_move, attack_power, team, character_type, competences, max_move):
+        # Appeler le constructeur de la classe parente (Unit)
+        super().__init__(x, y, max_health, max_move, remaining_move, health, attack_power, team, character_type, competences)
+        
+        # Initialiser les attributs spécifiques à UnitWithHealthBar
+        self.remaining_move = remaining_move  # Déplacements restants
+        self.max_move = max_move  # Ajout de max_move dans l'initialisation
+
     def draw(self, screen):
         super().draw(screen)
 
@@ -123,6 +132,21 @@ class UnitWithHealthBar(Unit):
         font = pygame.font.Font(None, 18)
         move_text = font.render(f"Mv: {self.remaining_move}", True, WHITE)
         screen.blit(move_text, (self.x * CELL_SIZE + 5, self.y * CELL_SIZE + CELL_SIZE - 15))
+    # Méthode d'attaque
+    def attack(self, target):
+        if self.health > 0:
+            print(f"{self.name} attaque {target.name}")
+
+            # Exemple de calcul de dégâts (vous pouvez personnaliser la logique)
+            damage = 10  # Définir une logique de dégâts plus complexe ici
+            target.health -=self.attack_power
+
+            # Affichage des dégâts infligés
+            print(f"{target.name} perd {damage} points de vie. Santé restante: {target.health}")
+            if target.health <= 0:
+                print(f"{target.name} est mort.")
+        else:
+            print(f"{self.character_type} ne peut pas attaquer car il est mort.")
 
 
 class Game:
@@ -141,13 +165,15 @@ class Game:
         soin = Competence(name="Soin", range=2, area=[(0, 0)])
         # Initialisation des unités des deux joueurs
         self.player1_units = [
-            UnitWithHealthBar(0, 0, health=100, max_move=3, attack_power=20, team='player1', character_type="naruto", competences=[explosion,soin]),
-            UnitWithHealthBar(1, 0, health=80, max_move=5, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis])
+            UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=3, attack_power=20, team='player1', character_type="naruto", competences=[explosion,soin],max_move=3),
+            UnitWithHealthBar(1, 0, health=80, max_health=100,remaining_move=3, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis],max_move=5)
+                             
         ]
 
         self.player2_units = [
-            UnitWithHealthBar(6, 6, health=100, max_move=3, attack_power=15, team='player2', character_type="haruno", competences=[explosion]),
-            UnitWithHealthBar(7, 6, health=90, max_move=4, attack_power=30, team='player2', character_type="madara", competences=[tir_precis])
+            UnitWithHealthBar(6, 6, health=100, max_health=100,remaining_move=3, attack_power=15, team='player2', character_type="haruno", competences=[explosion],max_move=3),
+            UnitWithHealthBar(7, 6, health=90, max_health=100,remaining_move=3, attack_power=30, team='player2', character_type="madara", competences=[tir_precis],max_move=4)
+            
         ]
 
         # Chargement de la carte Tiled (.tmx)
@@ -156,6 +182,33 @@ class Game:
         except Exception as e:
             print(f"Erreur lors du chargement de la carte : {e}")
             self.tmx_data = None
+    def select_game_mode(screen):
+        """Affiche un menu pour sélectionner le mode de jeu."""
+        font = pygame.font.Font(None, 48)
+        options = ["1. Player vs Player", "2. Player vs IA"]
+        selected_option = 0
+
+        while True:
+            screen.fill(BLACK)
+            for i, option in enumerate(options):
+                color = (255, 255, 0) if i == selected_option else WHITE
+                text = font.render(option, True, color)
+                screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 100 + i * 50))
+
+            pygame.display.flip()
+    
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP and selected_option > 0:
+                        selected_option -= 1
+                    elif event.key == pygame.K_DOWN and selected_option < len(options) - 1:
+                        selected_option += 1
+                    elif event.key == pygame.K_RETURN:
+                        return selected_option + 1  # 1 pour PvP, 2 pour PvIA
     def check_game_over(self):
         """Vérifie si le jeu est terminé et déclare un gagnant."""
         if self.is_player_eliminated(self.player1_units):
@@ -322,6 +375,23 @@ class Game:
                                                 selected_unit.is_selected = False
                                                 in_targeting_mode = False                                                        
 
+    
+    def handle_enemy_turn(self):
+        """IA très simple pour les ennemis."""
+        for enemy in self.player2_units:
+
+            # Déplacement aléatoire
+            target = random.choice(self.player1_units)
+            dx = 1 if enemy.x < target.x else -1 if enemy.x > target.x else 0
+            dy = 1 if enemy.y < target.y else -1 if enemy.y > target.y else 0
+            enemy.move(dx, dy)
+
+            # Attaque si possible
+            if abs(enemy.x - target.x) <= 1 and abs(enemy.y - target.y) <= 1:
+                enemy.attack(target)
+                if target.health <= 0:
+                    self.player2_units.remove(target)
+       
 
     def flip_display(self):
         """Affiche le jeu avec la carte et les unités."""
@@ -577,6 +647,7 @@ if __name__ == "__main__":
     pygame.display.set_caption("Jeu Player 1 vs Player 2")
 
     game = Game(screen)
+    game_mode =Game.select_game_mode(screen)
 
     # Compétences disponibles
     explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
@@ -622,4 +693,8 @@ if __name__ == "__main__":
     # Lancer le jeu
     while True:
         game.handle_player_turn(game.player1_units, game.player2_units, "Player 1")
-        game.handle_player_turn(game.player2_units, game.player1_units, "Player 2")
+        if game_mode == 1:  # Player vs Player
+            game.handle_player_turn(game.player2_units, game.player1_units, "Player 2")
+        elif game_mode == 2:  # Player vs IA
+            game.handle_enemy_turn()  # Tour de l'IA
+
