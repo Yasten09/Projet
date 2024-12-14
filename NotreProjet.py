@@ -16,6 +16,49 @@ BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 PURPLE = (128, 0, 128)
 INACCESSIBLE_TILES = [(6, 0), (6, 1), (6, 2),(6, 3),(6, 4),(7, 0),(7, 1), (7, 2),(7, 3),(7, 4),(7, 5),(7,7),(8,5),(8, 7),(8, 8),(8, 9),(9,8),(9,9),(9, 10),(9, 11),(9, 12),(9, 14),(9, 15),(10,8),(10,9),(10, 10),(10, 11),(10, 12),(10, 14),(10, 15)]
+# Cases qui réduisent la santé
+# Cases où les unités sont protégées
+DAMAGE_AMOUNT = 10  # Quantité de santé retirée
+SHELTER_TILES = [(3, 1), (3, 5), (6, 6), (1, 2), (2, 1), (4, 3), (15, 3), (13, 3), (5, 9), (9, 6)]
+
+# Cases qui réduisent la santé
+DAMAGE_TILES = [(3, 3), (5, 5), (2, 8), (2, 15), (1, 15), (3, 8), (12, 8), (13, 15), (13, 2), (13, 5), (8, 4), (6, 9)]
+
+
+# Liste des cases en feu
+active_fire_tiles = []
+
+# Charger l'image de feu
+fire_image = pygame.image.load("images/feu.png")
+fire_image = pygame.transform.scale(fire_image, (CELL_SIZE, CELL_SIZE))
+
+
+safe_image = pygame.image.load("images/safe.webp")
+safe_image = pygame.transform.scale(safe_image, (CELL_SIZE, CELL_SIZE))
+
+def find_valid_move(enemy, target):
+    """Trouve un mouvement valide pour l'ennemi en direction de la cible, contournant les obstacles."""
+    possible_moves = [
+        (1, 0),   # Droite
+        (-1, 0),  # Gauche
+        (0, 1),   # Bas
+        (0, -1)   # Haut
+    ]
+
+    # Trie les mouvements par proximité à la cible
+    possible_moves.sort(key=lambda move: abs(enemy.x + move[0] - target.x) + abs(enemy.y + move[1] - target.y))
+
+    # Cherche un mouvement valide
+    for dx, dy in possible_moves:
+        new_x = enemy.x + dx
+        new_y = enemy.y + dy
+        if (0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE) and (new_x, new_y) not in INACCESSIBLE_TILES:
+            return dx, dy
+
+    # Aucun mouvement valide trouvé
+    return 0, 0
+
+
 def heal(user, target, units):      #fonction soigne les allier
     
     #print(f"{user.unit_type} utilise Soin sur {target.unit_type} !")
@@ -85,6 +128,16 @@ class Unit:
                     self.remaining_move -= distance  # Décrémenter le nombre de déplacements restants
                 else:
                     print(f"Case ({new_x}, {new_y}) inaccessible.")
+                if (new_x, new_y) in DAMAGE_TILES:
+                    self.health -= DAMAGE_AMOUNT
+                    print(f"L'unité a subi {DAMAGE_AMOUNT} points de dégâts sur la case ({new_x}, {new_y}). Santé restante : {self.health}")
+                    
+                    # Ajouter la case à la liste des cases en feu
+                    if (new_x, new_y) not in active_fire_tiles:
+                        active_fire_tiles.append((new_x, new_y))
+
+                    if self.health <= 0:
+                        print("L'unité a été éliminée !")
 
     def draw(self, screen):
         """Affiche l'unité à l'écran."""
@@ -93,17 +146,21 @@ class Unit:
         screen.blit(self.image, (draw_x, draw_y))
 
     def attack_zone(self, cx, cy, opponent_units, competence):
-        """Attaque une zone cible en fonction de la compétence."""
+        """Attaque une zone cible en fonction de la compétence, sauf si l'unité est dans un abri."""
         for dx, dy in competence.area:
             target_x = cx + dx
             target_y = cy + dy
+            
             if 0 <= target_x < GRID_SIZE and 0 <= target_y < GRID_SIZE:
                 for unit in opponent_units:
                     if unit.x == target_x and unit.y == target_y:
-                        print(f"{self.character_type} attaque {unit.character_type} à ({target_x}, {target_y})")
-                        unit.health -= self.attack_power
-                        if unit.health <= 0:
-                            print(f"{unit.character_type} a été éliminé(e) !")
+                        if (unit.x, unit.y) in SHELTER_TILES:
+                            print(f"L'unité {unit.character_type} est dans un abri et ne peut pas être attaquée.")
+                        else:
+                            print(f"{self.character_type} attaque {unit.character_type} à ({target_x}, {target_y})")
+                            unit.health -= self.attack_power
+                            if unit.health <= 0:
+                                print(f"{unit.character_type} a été éliminé(e) !")
                         break
 
 
@@ -155,6 +212,20 @@ class UnitWithHealthBar(Unit):
         font = pygame.font.Font(None, 18)
         move_text = font.render(f"Mv: {self.remaining_move}", True, WHITE)
         screen.blit(move_text, (self.x * CELL_SIZE + 5, self.y * CELL_SIZE + CELL_SIZE - 15))
+
+
+
+    # Dessiner le feu sur les cases en feu
+        for fire_tile in active_fire_tiles:
+            fire_x = fire_tile[0] * CELL_SIZE
+            fire_y = fire_tile[1] * CELL_SIZE
+            screen.blit(fire_image, (fire_x, fire_y))
+     
+    # case à l'abris
+        for safe_tile in SHELTER_TILES:
+            safe_x = safe_tile[0] * CELL_SIZE
+            safe_y = safe_tile[1] * CELL_SIZE
+            screen.blit(safe_image, (safe_x, safe_y))            
     # Méthode d'attaque
     def attack(self, target):
         if self.health > 0:
@@ -184,19 +255,18 @@ class Game:
 
         # Définition des compétences
         explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
-        tir_precis = Competence(name="Tir précis", range=4, area=[(0, 0)])
-        soin = Competence(name="Soin", range=2, area=[(0, 0)])
+ 
         # Initialisation des unités des deux joueurs
         self.player1_units = [
-            UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=8, attack_power=20, team='player1', character_type="naruto", competences=[explosion,soin],max_move=3),
+            UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=6, attack_power=6, team='player1', character_type="naruto", competences=[],max_move=6),
             #UnitWithHealthBar(1, 0, health=80, max_health=100,remaining_move=7, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis],max_move=5),
-             UnitWithHealthBar(2, 0, health=80, max_health=100,remaining_move=7, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis],max_move=5)                 
+             UnitWithHealthBar(2, 0, health=80, max_health=100,remaining_move=6, attack_power=6, team='player1', character_type="uchiwa", competences=[],max_move=6)                 
         ]
 
         self.player2_units = [
-            UnitWithHealthBar(6, 6, health=100, max_health=100,remaining_move=3, attack_power=15, team='player2', character_type="haruno", competences=[explosion],max_move=3),
+            UnitWithHealthBar(6, 6, health=100, max_health=100,remaining_move=6, attack_power=15, team='player2', character_type="haruno", competences=[],max_move=6),
             #UnitWithHealthBar(7, 6, health=90, max_health=100,remaining_move=3, attack_power=30, team='player2', character_type="madara", competences=[tir_precis],max_move=4),
-             UnitWithHealthBar(5, 6, health=80, max_health=100,remaining_move=7, attack_power=25, team='player2', character_type="uchiwa", competences=[tir_precis],max_move=5)
+             UnitWithHealthBar(5, 6, health=80, max_health=100,remaining_move=6, attack_power=25, team='player2', character_type="uchiwa", competences=[],max_move=6)
         ]
 
         # Chargement de la carte Tiled (.tmx)
@@ -261,7 +331,12 @@ class Game:
     def handle_player_turn(self, player_units, opponent_units, player_name):
         """Tour d'un joueur : déplacement et choix de zone pour attaquer."""
         if self.is_player_eliminated(player_units):
+            self.check_game_over()
             print(f"{player_name} est éliminé, il ne peut plus jouer.")
+        if self.is_player_eliminated(opponent_units):
+            self.check_game_over    
+
+            
             return
         for selected_unit in player_units:
             if selected_unit.health <= 0:  # Si l'unité est éliminée, passez à la suivante
@@ -289,11 +364,15 @@ class Game:
                             dy = 1
                             
                         selected_unit.move(dx, dy)
-                        if selected_unit.x==2 and selected_unit.y==2:
-                            selected_unit.move(-dx,-dy)
+
 
                         self.flip_display()
                         if event.key == pygame.K_s or event.key == pygame.K_SPACE:
+                            if (selected_unit.x, selected_unit.y) in SHELTER_TILES:
+                                print(f"L'unité {selected_unit.character_type} est dans un abri et ne peut pas attaquer.")
+                                has_acted = True
+                                selected_unit.is_selected = False
+                                continue
                             if event.key == pygame.K_s and selected_unit.competences:
                                 competence = selected_unit.competences[1]
                                 i=1
@@ -346,13 +425,15 @@ class Game:
                                                                                                           
                                                 selected_unit.is_selected = False
                                                 for ally in player_units:
-                                                    if ally.x == cx and ally.y == cy:
-                                                        if abs(selected_unit.x - cx) <= competence.range and abs(selected_unit.y - cy) <= competence.range:
-                                                            heal(selected_unit, ally, player_units)
-                                                            has_acted = True
-                                                            in_targeting_mode = False
+                                                    if ally!=selected_unit:
+                                                        if ally.x == cx and ally.y == cy:
+                                                            if abs(selected_unit.x - cx) <= competence.range and abs(selected_unit.y - cy) <= competence.range:
+                                                                heal(selected_unit, ally, player_units)
+                                                            
+                                                                has_acted = True
+                                                                in_targeting_mode = False
                                                                                                           
-                                                            selected_unit.is_selected = False
+                                                                selected_unit.is_selected = False
 
                                                 
                                                             break
@@ -404,9 +485,7 @@ class Game:
 
     def handle_enemy_turn(self):
         
-        if self.is_player_eliminated(self.player2_units):
-            print(f"player 2 est éliminé, il ne peut plus jouer.")
-            return
+
         # Dessiner la grille
         for x in range(0, WIDTH, CELL_SIZE):
             for y in range(0, HEIGHT, CELL_SIZE):
@@ -414,15 +493,23 @@ class Game:
                 pygame.draw.rect(self.screen, WHITE, rect, 1)
         """IA pour les ennemis : les ennemis se déplacent et attaquent avec une compétence si une cible est à portée."""
         for enemy in self.player2_units[:]:  # Parcourt une copie pour éviter les problèmes de suppression
-            
+            if self.is_player_eliminated(self.player2_units):
+                print(f"player 2 est éliminé, il ne peut plus jouer.")    
+                self.check_game_over()
+                return
+            if self.is_player_eliminated(self.player1_units):
+                self.check_game_over()
+                return
             enemy.remaining_move = enemy.max_move 
             move_restant=enemy.max_move 
             while move_restant>0:
             # Choisir la cible la plus proche parmi les unités du joueur
                 target = min(self.player1_units, key=lambda unit: abs(unit.x - enemy.x) + abs(unit.y - enemy.y))
-                dx = 1 if enemy.x < target.x else -1 if enemy.x > target.x else 1
-                dy = 1 if enemy.y < target.y else -1 if enemy.y > target.y else 1
+                dx, dy = find_valid_move(enemy, target)
+                if dx == 0 and dy == 0:
+                    break
                 enemy.move(dx, dy)
+                
                 move_restant-=1
             # Calcul de la distance entre l'ennemi et la cible
             distance_to_friend=float('inf')
@@ -442,7 +529,11 @@ class Game:
             self.flip_display()
             # Mise à jour de la distance après déplacement
            
-
+            if (enemy.x, enemy.y) in SHELTER_TILES:
+                print(f"L'unité {enemy.character_type} est dans un abri et ne peut pas attaquer.")
+                has_acted = True
+                enemy.is_selected = False
+                continue
             # Attaquer avec une compétence si possible
             if enemy.competences:
                 if enemy.competences[0].name !="Soin" and enemy.competences[1].name != "Soin":
@@ -546,6 +637,7 @@ class Game:
                 if target.health <= 0:
                     print(f"L'unité du joueur en position ({target.x}, {target.y}) est éliminée.")
                     self.player1_units.remove(target)
+                    
     def flip_display(self):
         """Affiche le jeu."""
         self.screen.fill(BLACK)
