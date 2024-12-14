@@ -14,7 +14,8 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
-
+PURPLE = (128, 0, 128)
+INACCESSIBLE_TILES = [(6, 0), (6, 1), (6, 2),(6, 3),(6, 4),(7, 0),(7, 1), (7, 2),(7, 3),(7, 4),(7, 5),(7,7),(8,5),(8, 7),(8, 8),(8, 9),(9,8),(9,9),(9, 10),(9, 11),(9, 12),(9, 14),(9, 15),(10,8),(10,9),(10, 10),(10, 11),(10, 12),(10, 14),(10, 15)]
 def heal(user, target, units):      #fonction soigne les allier
     
     #print(f"{user.unit_type} utilise Soin sur {target.unit_type} !")
@@ -70,7 +71,7 @@ class Unit:
 
     def move(self, dx, dy):
         """Déplace l'unité sur la grille, sauf si la case cible est inaccessible."""
-        INACCESSIBLE_TILES = [(6, 0), (6, 1), (6, 2),(6, 3),(6, 4),(7, 0),(7, 1), (7, 2),(7, 3),(7, 4),(7, 5),(7,7),(8,5),(8, 7),(8, 8),(8, 9),(9,8),(9,9),(9, 10),(9, 11),(9, 12),(9, 14),(9, 15),(10,8),(10,9),(10, 10),(10, 11),(10, 12),(10, 14),(10, 15)]
+        
         if self.remaining_move > 0:
             new_x = self.x + dx
             new_y = self.y + dy
@@ -116,6 +117,28 @@ class UnitWithHealthBar(Unit):
         self.max_move = max_move  # Ajout de max_move dans l'initialisation
 
     def draw(self, screen):
+        
+        # Couleurs pour chaque équipe
+        team_colors = {
+            'player1': GREEN,  # Couleur du joueur 1
+            'player2': PURPLE    # Couleur du joueur 2
+        }
+
+        # Dessiner le contour coloré
+        team_color = team_colors.get(self.team, WHITE)  # Blanc par défaut si l'équipe n'est pas reconnue
+        pygame.draw.rect(
+            screen,
+            team_color,
+            (
+                self.x * CELL_SIZE - 2,  # Légèrement plus grand que l'unité
+                self.y * CELL_SIZE - 2,
+                CELL_SIZE + 4,
+                CELL_SIZE + 4
+            ),
+             4 if self.is_selected else 2   # Épaisseur de la bordure
+        )
+
+        # Dessiner l'unité
         super().draw(screen)
 
         # Barre de santé
@@ -135,7 +158,7 @@ class UnitWithHealthBar(Unit):
     # Méthode d'attaque
     def attack(self, target):
         if self.health > 0:
-            print(f"{self.name} attaque {target.name}")
+            #print(f"{self.name} attaque {target.name}")
 
             # Exemple de calcul de dégâts (vous pouvez personnaliser la logique)
             damage = 10  # Définir une logique de dégâts plus complexe ici
@@ -156,7 +179,7 @@ class Game:
     def __init__(self, screen):
         self.screen = screen
         self.winner = None # Variable pour stocker l'équipe gagnante
-        
+        self.gameover=0
 
 
         # Définition des compétences
@@ -165,15 +188,15 @@ class Game:
         soin = Competence(name="Soin", range=2, area=[(0, 0)])
         # Initialisation des unités des deux joueurs
         self.player1_units = [
-            UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=3, attack_power=20, team='player1', character_type="naruto", competences=[explosion,soin],max_move=3),
-            UnitWithHealthBar(1, 0, health=80, max_health=100,remaining_move=3, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis],max_move=5)
-                             
+            UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=8, attack_power=20, team='player1', character_type="naruto", competences=[explosion,soin],max_move=3),
+            #UnitWithHealthBar(1, 0, health=80, max_health=100,remaining_move=7, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis],max_move=5),
+             UnitWithHealthBar(2, 0, health=80, max_health=100,remaining_move=7, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis],max_move=5)                 
         ]
 
         self.player2_units = [
             UnitWithHealthBar(6, 6, health=100, max_health=100,remaining_move=3, attack_power=15, team='player2', character_type="haruno", competences=[explosion],max_move=3),
-            UnitWithHealthBar(7, 6, health=90, max_health=100,remaining_move=3, attack_power=30, team='player2', character_type="madara", competences=[tir_precis],max_move=4)
-            
+            #UnitWithHealthBar(7, 6, health=90, max_health=100,remaining_move=3, attack_power=30, team='player2', character_type="madara", competences=[tir_precis],max_move=4),
+             UnitWithHealthBar(5, 6, health=80, max_health=100,remaining_move=7, attack_power=25, team='player2', character_type="uchiwa", competences=[tir_precis],max_move=5)
         ]
 
         # Chargement de la carte Tiled (.tmx)
@@ -213,8 +236,12 @@ class Game:
         """Vérifie si le jeu est terminé et déclare un gagnant."""
         if self.is_player_eliminated(self.player1_units):
             self.winner = "Player 2"  # Player 2 gagne
+            self.gameover=1
         elif self.is_player_eliminated(self.player2_units):
             self.winner = "Player 1"  # Player 1 gagne
+            self.gameover=1
+        print("we have a winner")    
+        self.display_winner()
     
     def is_player_eliminated(self, player_units):
         """Vérifie si toutes les unités du joueur sont éliminées."""
@@ -375,23 +402,224 @@ class Game:
                                                 selected_unit.is_selected = False
                                                 in_targeting_mode = False                                                        
 
-    
     def handle_enemy_turn(self):
-        """IA très simple pour les ennemis."""
-        for enemy in self.player2_units:
+        
+        if self.is_player_eliminated(self.player2_units):
+            print(f"player 2 est éliminé, il ne peut plus jouer.")
+            return
+        # Dessiner la grille
+        for x in range(0, WIDTH, CELL_SIZE):
+            for y in range(0, HEIGHT, CELL_SIZE):
+                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(self.screen, WHITE, rect, 1)
+        """IA pour les ennemis : les ennemis se déplacent et attaquent avec une compétence si une cible est à portée."""
+        for enemy in self.player2_units[:]:  # Parcourt une copie pour éviter les problèmes de suppression
+            
+            enemy.remaining_move = enemy.max_move 
+            move_restant=enemy.max_move 
+            while move_restant>0:
+            # Choisir la cible la plus proche parmi les unités du joueur
+                target = min(self.player1_units, key=lambda unit: abs(unit.x - enemy.x) + abs(unit.y - enemy.y))
+                dx = 1 if enemy.x < target.x else -1 if enemy.x > target.x else 1
+                dy = 1 if enemy.y < target.y else -1 if enemy.y > target.y else 1
+                enemy.move(dx, dy)
+                move_restant-=1
+            # Calcul de la distance entre l'ennemi et la cible
+            distance_to_friend=float('inf')
+            distance_to_target = abs(enemy.x - target.x) + abs(enemy.y - target.y)
+            #Ami le plus proche
+            
 
-            # Déplacement aléatoire
-            target = random.choice(self.player1_units)
-            dx = 1 if enemy.x < target.x else -1 if enemy.x > target.x else 0
-            dy = 1 if enemy.y < target.y else -1 if enemy.y > target.y else 0
-            enemy.move(dx, dy)
+            for amiproche in self.player2_units[:]:
+                if enemy!=amiproche:
+                    dis=abs(enemy.x - amiproche.x) + abs(enemy.y - amiproche.y)
+                    if dis<distance_to_friend:
+                        distance_to_friend=dis
+                        closest_ami=amiproche
+            
+            # Si la cible n'est pas à portée, se rapprocher
 
-            # Attaque si possible
-            if abs(enemy.x - target.x) <= 1 and abs(enemy.y - target.y) <= 1:
-                enemy.attack(target)
+            self.flip_display()
+            # Mise à jour de la distance après déplacement
+           
+
+            # Attaquer avec une compétence si possible
+            if enemy.competences:
+                if enemy.competences[0].name !="Soin" and enemy.competences[1].name != "Soin":
+                    closest_x = target.x
+                    closest_y = target.y
+                    competence0 = enemy.competences[0]
+                    competence1 = enemy.competences[1] 
+                    comp_utilise=competence0 #par defaut
+                    if distance_to_target > enemy.competences[0].range or distance_to_target > enemy.competences[1].range:
+                        if distance_to_target > enemy.competences[0].range:
+                            comp_utilise=competence0
+                        elif distance_to_target > enemy.competences[1].range:
+                            comp_utilise=competence1
+                        
+                
+                    #print(f"L'ennemi {enemy.team} utilise {competence.name} sur une cible proche.")
+
+                    # Afficher la zone d'attaque de l'ennemi en rouge pendant qu'il se prépare à attaquer
+
+                    
+                    else:
+                        # Frapper à la zone la plus proche de la cible
+
+
+                        if abs(enemy.x - target.x) > comp_utilise.range:
+                            closest_x = enemy.x + (comp_utilise.range if enemy.x < target.x else -comp_utilise.range)
+
+                        if abs(enemy.y - target.y) > comp_utilise.range:
+                            closest_y = enemy.y + (comp_utilise.range if enemy.y < target.y else -comp_utilise.range)
+
+                        print(f"L'ennemi {enemy.team} attaque la zone la plus proche de la cible ({closest_x}, {closest_y}).")
+
+                    if abs(closest_x - enemy.x) > comp_utilise.range:
+                        if closest_x > enemy.x:
+                                closest_x -= (closest_x - enemy.x - comp_utilise.range)
+                        elif closest_x < enemy.x:
+                                closest_x += (enemy.y - closest_x - comp_utilise.range)
+
+                    if abs(closest_y - enemy.y) > comp_utilise.range:
+                        if closest_y > enemy.y:
+                                closest_y -= (closest_y - enemy.y - comp_utilise.range)
+                        elif closest_x < enemy.x:
+                                closest_y += (enemy.y - closest_y - comp_utilise.range)
+
+
+                    self.flip_display_with_enemy_target(enemy, comp_utilise, [closest_x, closest_y])
+                    enemy.attack_zone(closest_x, closest_y, self.player1_units, comp_utilise)
+                elif enemy.competences[0].name=="Soin" or enemy.competences[1].name == "Soin":
+                    if enemy.competences[0].name=="Soin":
+                        comp_sante=enemy.competences[0]
+                        comp_attack=enemy.competences[1]
+                    else: 
+                        comp_sante=enemy.competences[1]
+                        comp_attack=enemy.competences[0]  
+                    print(enemy.competences[0].name,enemy.competences[1].name)    
+                    # Verifier si l'enemy est a la porté on applique la competence d'attaque sinon on applique la santé    
+                    if distance_to_target < comp_attack.range:
+                        self.flip_display_with_enemy_target(enemy, comp_attack, [target.x, target.y])
+                        enemy.attack_zone(target.x, target.y, self.player1_units, comp_attack)    
+                    elif  closest_ami.health<30:
+                         self.flip_display_with_enemy_target(enemy, comp_sante, [closest_ami.x, closest_ami.y])
+                         heal(enemy,closest_ami,closest_ami)                      
+                    else:
+                        # Frapper à la zone la plus proche de la cible
+                        closest_x=target.x
+                        closest_y=target.y
+                        comp_utilise=comp_attack
+
+                        
+
+                        if abs(closest_x - enemy.x) > comp_utilise.range:
+                            if closest_x > enemy.x:
+                                closest_x -= (closest_x - enemy.x - comp_utilise.range)
+                            elif closest_x < enemy.x:
+                                  closest_x += (enemy.y - closest_x - comp_utilise.range)
+
+                        if abs(closest_y - enemy.y) > comp_utilise.range:
+                            if closest_y > enemy.y:
+                                closest_y -= (closest_y - enemy.y - comp_utilise.range)
+                            elif closest_x < enemy.x:
+                                closest_y += (enemy.y - closest_y - comp_utilise.range)
+                        print(f"L'ennemi {enemy.team} attaque la zone la plus proche de la cible ({closest_x}, {closest_y}).")        
+                        self.flip_display_with_enemy_target(enemy, comp_utilise, [closest_x,closest_y])
+                        enemy.attack_zone(closest_y, closest_y, self.player1_units, comp_utilise)            
+
+                    # Verifier si l'enemy est a la porté on applique la competence d'attaque sinon on applique la santé
+                          
+
+                # Pause de 2 secondes pour visualiser l'attaque
+
+
+
+
+
+
+
+                time.sleep(2)
+
+            # Vérifie si la cible a été éliminée
+            for target in self.player1_units[:]:
                 if target.health <= 0:
-                    self.player2_units.remove(target)
-       
+                    print(f"L'unité du joueur en position ({target.x}, {target.y}) est éliminée.")
+                    self.player1_units.remove(target)
+    def flip_display(self):
+        """Affiche le jeu."""
+        self.screen.fill(BLACK)
+
+        # Dessiner la grille
+        for x in range(0, WIDTH, CELL_SIZE):
+            for y in range(0, HEIGHT, CELL_SIZE):
+                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(self.screen, WHITE, rect, 1)
+
+        # Dessiner les unités
+        for unit in self.player_units + self.enemy_units:
+            unit.draw(self.screen)
+
+        pygame.display.flip()
+    def flip_display_with_enemy_target(self, enemy, competence, target):
+        """Affiche le jeu avec le curseur de ciblage et la portée de l'attaque de l'ennemi."""
+        #self.screen.fill(BLACK)
+
+        
+        # Afficher la portée de la compétence
+        for dx in range(-competence.range, competence.range + 1):
+            for dy in range(-competence.range, competence.range + 1):
+                if 0 <= enemy.x + dx < GRID_SIZE and 0 <= enemy.y + dy < GRID_SIZE:
+                    rect = pygame.Rect((enemy.x + dx) * CELL_SIZE, (enemy.y + dy) * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                    pygame.draw.rect(self.screen, (50, 50, 200), rect, 1)  # Bleu clair pour la portée
+
+        # Dessiner les unités
+        for u in self.player1_units + self.player2_units:
+            u.draw(self.screen)
+
+        # Dessiner la zone d'attaque de l'ennemi en rouge
+        for dx, dy in competence.area:
+            tx, ty = target[0] + dx, target[1] + dy  # Coordonnées des cases affectées
+            if 0 <= tx < GRID_SIZE and 0 <= ty < GRID_SIZE:
+                rect = pygame.Rect(tx * CELL_SIZE, ty * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(self.screen, RED, rect, 2)  # Rouge pour la zone d'attaque
+
+        # Dessiner le curseur de ciblage de l'ennemi
+        rect = pygame.Rect(target[0] * CELL_SIZE, target[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        pygame.draw.rect(self.screen, RED, rect, 3)  # Vert pour le curseur de ciblage
+
+        pygame.display.flip()
+    def flip_display_with_target(self, cx, cy, unit, competence):
+        """Affiche le jeu avec le curseur de ciblage et la portée de l'attaque de l'ennemi."""
+        self.screen.fill(BLACK)
+
+        # Dessiner la grille
+        for x in range(0, WIDTH, CELL_SIZE):
+            for y in range(0, HEIGHT, CELL_SIZE):
+                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(self.screen, WHITE, rect, 1)
+
+        # Afficher la portée de la compétence
+        for dx in range(-competence.range, competence.range + 1):
+            for dy in range(-competence.range, competence.range + 1):
+                if 0 <= unit.x + dx < GRID_SIZE and 0 <= unit.y + dy < GRID_SIZE:
+                    rect = pygame.Rect((unit.x + dx) * CELL_SIZE, (unit.y + dy) * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                    pygame.draw.rect(self.screen, (50, 50, 200), rect, 1)  # Bleu clair pour la portée
+
+        # Dessiner les unités
+        for u in self.player1_units + self.player2_units:
+            u.draw(self.screen)
+
+        # Dessiner la zone d'attaque de l'ennemi en rouge
+        for dx, dy in competence.area:
+            tx, ty = cx + dx, cy + dy  # Coordonnées des cases affectées
+            if 0 <= tx < GRID_SIZE and 0 <= ty < GRID_SIZE:
+                rect = pygame.Rect(tx * CELL_SIZE, ty * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(self.screen, RED, rect, 2)  # Rouge pour la zone d'attaque
+
+        # Dessiner le curseur de ciblage de l'ennemi
+        rect = pygame.Rect(cx * CELL_SIZE, cy * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        pygame.draw.rect(self.screen, RED, rect, 3)  # Vert pour le curseur de ciblage
 
     def flip_display(self):
         """Affiche le jeu avec la carte et les unités."""
@@ -691,7 +919,8 @@ if __name__ == "__main__":
     competence_selector.choose_competences(game.player2_units, "Player 2")
 
     # Lancer le jeu
-    while True:
+    while not game.gameover:
+        game.check_game_over()
         game.handle_player_turn(game.player1_units, game.player2_units, "Player 1")
         if game_mode == 1:  # Player vs Player
             game.handle_player_turn(game.player2_units, game.player1_units, "Player 2")
