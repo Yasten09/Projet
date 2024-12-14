@@ -102,8 +102,7 @@ class Unit:
         except pygame.error:
             print(f"Image {image_path} introuvable. Utilisation de l'image par défaut.")
             self.image = pygame.image.load("images/default.png")
-
-        self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))
+            self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))
 
     def move(self, dx, dy,is_fast_move=False):
         """Déplace l'unité sur la grille, sauf si la case cible est inaccessible."""
@@ -286,14 +285,28 @@ class Game:
             self.tmx_data = None
     def select_game_mode(screen):
         """Affiche un menu pour sélectionner le mode de jeu."""
+        pygame.mixer.init()  # Initialiser le module audio
         font = pygame.font.Font(None, 48)
         options = ["1. Player vs Player", "2. Player vs IA"]
-        selected_option = 0
+        selected_option = 0# Charger l'image de fond
+        mode_image = pygame.image.load("mode.png")  # Remplacez par le chemin de votre image
+        mode_image = pygame.transform.scale(mode_image, (WIDTH, HEIGHT))  # Ajuster à la taille de l'écran
+
+        try:
+           pygame.mixer.music.load("mode.mp3")  # Remplacez par le chemin de votre musique
+           pygame.mixer.music.play(-1)  # Joue en boucle (-1)
+        except pygame.error as e:
+           print(f"Erreur de chargement de la musique : {e}")
+
+
 
         while True:
             screen.fill(BLACK)
+            # Si l'image est chargée, l'afficher
+            if mode_image:
+                screen.blit(mode_image, (0, 0))
             for i, option in enumerate(options):
-                color = (255, 255, 0) if i == selected_option else WHITE
+                color = (255,0, 0) if i == selected_option else WHITE
                 text = font.render(option, True, color)
                 screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 100 + i * 50))
 
@@ -310,6 +323,7 @@ class Game:
                     elif event.key == pygame.K_DOWN and selected_option < len(options) - 1:
                         selected_option += 1
                     elif event.key == pygame.K_RETURN:
+                        pygame.mixer.music.stop() 
                         return selected_option + 1  # 1 pour PvP, 2 pour PvIA
     def check_game_over(self):
         """Vérifie si le jeu est terminé et déclare un gagnant."""
@@ -329,6 +343,18 @@ class Game:
     def display_winner(self):
         """Affiche l'équipe gagnante."""
         if self.winner:
+            try:
+               pygame.mixer.init()
+               pygame.mixer.music.load("fin.mp3")  # Remplacez par le chemin de votre fichier musical
+               pygame.mixer.music.play()
+            except pygame.error as e:
+               print(f"Erreur lors du chargement de la musique : {e}")
+            
+            # Remplir l'écran avec un fond noir
+            self.screen.fill((0, 0, 0))
+
+                
+
             font = pygame.font.Font(None, 36)
             winner_text = font.render(f"{self.winner} wins!", True, (255, 255, 255))
             self.screen.blit(winner_text, (WIDTH // 2 - winner_text.get_width() // 2, HEIGHT // 2))
