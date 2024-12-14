@@ -75,6 +75,20 @@ class Competence:
 
     def __repr__(self):
         return f"Competence(name={self.name}, range={self.range}, area={self.area})"
+class FastMove(Competence):
+    def __init__(self):
+        # La compétence "Fast Move" n'a pas de portée spécifique ni de zone d'effet
+        super().__init__(name="Fast Move", range=0, area=[])
+
+    def apply(self, unit, dx, dy):
+        """Applique la compétence Fast Move : déplace l'unité de 3 cases dans la direction spécifiée (dx, dy)."""
+        # Déplace l'unité de 3 cases dans la direction donnée (dx, dy)
+        for _ in range(3):  # Déplace l'unité de 3 cases
+            unit.move(dx, dy)
+            
+        if unit.remaining_move >0:    
+    
+            unit.remaining_move-= 1
 
 
 class Unit:
@@ -112,12 +126,14 @@ class Unit:
 
         self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))
 
-    def move(self, dx, dy):
+    def move(self, dx, dy,is_fast_move=False):
         """Déplace l'unité sur la grille, sauf si la case cible est inaccessible."""
         
         if self.remaining_move > 0:
-            new_x = self.x + dx
-            new_y = self.y + dy
+            move_distance = 3 if is_fast_move else 1
+            for _ in range(move_distance):
+                new_x = self.x + dx
+                new_y = self.y + dy
 
             # Vérifie si la case cible est dans les limites et n'est pas interdite
             if (0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE) and (new_x, new_y) not in INACCESSIBLE_TILES :
@@ -255,7 +271,8 @@ class Game:
 
         # Définition des compétences
         explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
- 
+        fast_move = FastMove()
+
         # Initialisation des unités des deux joueurs
         self.player1_units = [
             UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=6, attack_power=6, team='player1', character_type="naruto", competences=[],max_move=6),
@@ -362,8 +379,12 @@ class Game:
                             dy = -1
                         elif event.key == pygame.K_DOWN:
                             dy = 1
-                            
-                        selected_unit.move(dx, dy)
+                        if any(isinstance(comp, FastMove) for comp in selected_unit.competences):
+                            fast_move = next(comp for comp in selected_unit.competences if isinstance(comp, FastMove))
+                            fast_move.apply(selected_unit, dx, dy)  # Applique le déplacement de 3 cases
+                        else:
+   
+                            selected_unit.move(dx, dy)
 
 
                         self.flip_display()
@@ -973,6 +994,7 @@ if __name__ == "__main__":
     explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
     tir_precis = Competence(name="Tir précis", range=4, area=[(0, 0)])
     soin = Competence(name="Soin", range=2, area=[(0, 0)])
+    fast_move=FastMove()
 
     available_characters = ["naruto", "uchiwa", "haruno", "itachi","madara"]
     character_images = {
@@ -999,7 +1021,7 @@ if __name__ == "__main__":
         unit.character_type = player2_characters[i]
         unit.image = pygame.image.load(f"images/{unit.character_type}.png")
         unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))
-    competences_disponibles = [explosion, tir_precis, soin]
+    competences_disponibles = [explosion, tir_precis, soin,fast_move]
 
     # Initialisation du sélecteur de compétences
     competence_selector = CompetenceSelector(screen, competences_disponibles)
