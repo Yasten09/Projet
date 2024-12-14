@@ -36,34 +36,10 @@ fire_image = pygame.transform.scale(fire_image, (CELL_SIZE, CELL_SIZE))
 safe_image = pygame.image.load("images/safe.webp")
 safe_image = pygame.transform.scale(safe_image, (CELL_SIZE, CELL_SIZE))
 
-def find_valid_move(enemy, target):
-    """Trouve un mouvement valide pour l'ennemi en direction de la cible, contournant les obstacles."""
-    possible_moves = [
-        (1, 0),   # Droite
-        (-1, 0),  # Gauche
-        (0, 1),   # Bas
-        (0, -1)   # Haut
-    ]
-
-    # Trie les mouvements par proximité à la cible
-    possible_moves.sort(key=lambda move: abs(enemy.x + move[0] - target.x) + abs(enemy.y + move[1] - target.y))
-
-    # Cherche un mouvement valide
-    for dx, dy in possible_moves:
-        new_x = enemy.x + dx
-        new_y = enemy.y + dy
-        if (0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE) and (new_x, new_y) not in INACCESSIBLE_TILES:
-            return dx, dy
-
-    # Aucun mouvement valide trouvé
-    return 0, 0
 
 
-def heal(user, target, units):      #fonction soigne les allier
-    
-    #print(f"{user.unit_type} utilise Soin sur {target.unit_type} !")
-    target.health += 20              # Ajoute 5 points de vie à la cible
-    target.health = max(target.health, 50)              # Limite la santé au maximum (par exemple 10)
+
+
 class Competence:
     """
     Classe pour représenter une compétence.
@@ -83,12 +59,15 @@ class FastMove(Competence):
     def apply(self, unit, dx, dy):
         """Applique la compétence Fast Move : déplace l'unité de 3 cases dans la direction spécifiée (dx, dy)."""
         # Déplace l'unité de 3 cases dans la direction donnée (dx, dy)
+        isFastMove=True
         for _ in range(3):  # Déplace l'unité de 3 cases
-            unit.move(dx, dy)
+
+            unit.move(dx, dy,isFastMove)
             
         if unit.remaining_move >0:    
     
             unit.remaining_move-= 1
+        isFastmove=False   
 
 
 class Unit:
@@ -131,19 +110,26 @@ class Unit:
         
         if self.remaining_move > 0:
             move_distance = 3 if is_fast_move else 1
+            if not is_fast_move:
+                i=1
+            else :
+                i=0    
             for _ in range(move_distance):
                 new_x = self.x + dx
                 new_y = self.y + dy
-
+            
             # Vérifie si la case cible est dans les limites et n'est pas interdite
             if (0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE) and (new_x, new_y) not in INACCESSIBLE_TILES :
                 distance = abs(dx) + abs(dy)
                 if distance <= self.remaining_move:
                     self.x = new_x
                     self.y = new_y
-                    self.remaining_move -= distance  # Décrémenter le nombre de déplacements restants
-                else:
-                    print(f"Case ({new_x}, {new_y}) inaccessible.")
+                    
+                      # Décrémenter le nombre de déplacements restants
+
+
+                print(f"Case ({new_x}, {new_y}) inaccessible.")
+
                 if (new_x, new_y) in DAMAGE_TILES:
                     self.health -= DAMAGE_AMOUNT
                     print(f"L'unité a subi {DAMAGE_AMOUNT} points de dégâts sur la case ({new_x}, {new_y}). Santé restante : {self.health}")
@@ -155,6 +141,8 @@ class Unit:
                     if self.health <= 0:
                         print("L'unité a été éliminée !")
 
+            if i==1:
+                self.remaining_move-=1
     def draw(self, screen):
         """Affiche l'unité à l'écran."""
         draw_x = self.x * CELL_SIZE
@@ -179,7 +167,11 @@ class Unit:
                                 print(f"{unit.character_type} a été éliminé(e) !")
                         break
 
-
+    def heal(self,user, target, units):      #fonction soigne les allier
+    
+    #print(f"{user.unit_type} utilise Soin sur {target.unit_type} !")
+        target.health += 20              # Ajoute 5 points de vie à la cible
+        target.health = max(target.health, 50)              # Limite la santé au maximum (par exemple 10)
 class UnitWithHealthBar(Unit):
     def __init__(self, x, y, health, max_health, remaining_move, attack_power, team, character_type, competences, max_move):
         # Appeler le constructeur de la classe parente (Unit)
@@ -383,8 +375,8 @@ class Game:
                             fast_move = next(comp for comp in selected_unit.competences if isinstance(comp, FastMove))
                             fast_move.apply(selected_unit, dx, dy)  # Applique le déplacement de 3 cases
                         else:
-   
-                            selected_unit.move(dx, dy)
+                            isFastMove=False
+                            selected_unit.move(dx, dy,isFastMove)
 
 
                         self.flip_display()
@@ -395,11 +387,19 @@ class Game:
                                 selected_unit.is_selected = False
                                 continue
                             if event.key == pygame.K_s and selected_unit.competences:
-                                competence = selected_unit.competences[1]
-                                i=1
+                                if selected_unit.competences[1].name in ("Tir précis","Explosion","Soin") :
+                                    competence = selected_unit.competences[1]
+                                    i=1
+                                else :
+                                    competence = selected_unit.competences[0]
+                                    i=0
                             elif event.key == pygame.K_SPACE: 
-                                i=0
-                                competence = selected_unit.competences[0]
+                                if selected_unit.competences[0].name in  ("Tir précis","Explosion","Soin") :
+                                    i=0
+                                    competence = selected_unit.competences[0]
+                                else:
+                                    competence = selected_unit.competences[1]   
+                                    i=1 
                             if competence.name == "Soin":
                                 print(f"{player_name} utilise la compétence {competence.name} !")
                                 in_targeting_mode = True
@@ -449,7 +449,7 @@ class Game:
                                                     if ally!=selected_unit:
                                                         if ally.x == cx and ally.y == cy:
                                                             if abs(selected_unit.x - cx) <= competence.range and abs(selected_unit.y - cy) <= competence.range:
-                                                                heal(selected_unit, ally, player_units)
+                                                                selected_unit.heal(selected_unit, ally, player_units)
                                                             
                                                                 has_acted = True
                                                                 in_targeting_mode = False
@@ -458,7 +458,7 @@ class Game:
 
                                                 
                                                             break
-                            else :
+                            elif competence.name == "Explosion" or competence.name == "Tir précis" :
                                     if selected_unit.competences:
                                         competence = selected_unit.competences[i]
                                         print(f"{player_name} utilise la compétence : {competence.name}")
@@ -502,8 +502,37 @@ class Game:
                                                 selected_unit.attack_zone(cx, cy, opponent_units, competence)
                                                 has_acted = True
                                                 selected_unit.is_selected = False
-                                                in_targeting_mode = False                                                        
+                            
+                                                in_targeting_mode = False             
 
+                            else : 
+                                                                                                  
+                                    has_acted = True
+                                    selected_unit.is_selected = False
+                            
+                                    in_targeting_mode = False 
+    def find_valid_move(self, enemy, target):
+        """Trouve un mouvement valide pour l'ennemi en direction de la cible, contournant les obstacles."""
+        possible_moves = [
+            (1, 0),   # Droite
+            (-1, 0),  # Gauche
+            (0, 1),   # Bas
+            (0, -1)   # Haut
+        ]
+
+        # Trie les mouvements par proximité à la cible
+        possible_moves.sort(key=lambda move: abs(enemy.x + move[0] - target.x) + abs(enemy.y + move[1] - target.y))
+
+        # Cherche un mouvement valide
+        for dx, dy in possible_moves:
+            new_x = enemy.x + dx
+            new_y = enemy.y + dy
+            if (0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE) and (new_x, new_y) not in INACCESSIBLE_TILES:
+                return dx, dy
+
+        # Aucun mouvement valide trouvé
+        return 0, 0
+                                
     def handle_enemy_turn(self):
         
 
@@ -526,7 +555,7 @@ class Game:
             while move_restant>0:
             # Choisir la cible la plus proche parmi les unités du joueur
                 target = min(self.player1_units, key=lambda unit: abs(unit.x - enemy.x) + abs(unit.y - enemy.y))
-                dx, dy = find_valid_move(enemy, target)
+                dx, dy = self.find_valid_move(enemy, target)
                 if dx == 0 and dy == 0:
                     break
                 enemy.move(dx, dy)
@@ -616,7 +645,7 @@ class Game:
                         enemy.attack_zone(target.x, target.y, self.player1_units, comp_attack)    
                     elif  closest_ami.health<30:
                          self.flip_display_with_enemy_target(enemy, comp_sante, [closest_ami.x, closest_ami.y])
-                         heal(enemy,closest_ami,closest_ami)                      
+                         enemy.heal(enemy,closest_ami,closest_ami)                      
                     else:
                         # Frapper à la zone la plus proche de la cible
                         closest_x=target.x
@@ -888,7 +917,8 @@ class CompetenceSelector:
                                     break
                                 else:
                                     print("Compétence déjà choisie, veuillez en sélectionner une autre.")
-
+            if unit.competences[0].name=="Fast Move":
+                unit.competences=unit.competences[::-1]
 
 class CharacterSelectionMenu:
     """
