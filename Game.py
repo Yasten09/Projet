@@ -36,6 +36,9 @@ INACCESSIBLE_TILES = [
 for x in range(0, 16):  
     if (x, 16) not in INACCESSIBLE_TILES:  
         INACCESSIBLE_TILES.append((x, 16))
+    if (x,17) not in INACCESSIBLE_TILES :
+        INACCESSIBLE_TILES.append((x, 16)) 
+
 
 
 
@@ -442,16 +445,14 @@ class Game:
 
         # Aucun mouvement valide trouvé
         return 0, 0
-                                
-    def handle_enemy_turn(self):
-        
+    def handle_enemy_turn(self):                           
 
         # Dessiner la grille
         for x in range(0, WIDTH, CELL_SIZE):
             for y in range(0, HEIGHT, CELL_SIZE):
                 rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
                 pygame.draw.rect(self.screen, WHITE, rect, 1)
-       
+        """IA pour les ennemis : les ennemis se déplacent et attaquent avec une compétence si une cible est à portée."""
         for enemy in self.player2_units[:]:  # Parcourt une copie pour éviter les problèmes de suppression
             if self.is_player_eliminated(self.player2_units):
                 print(f"player 2 est éliminé, il ne peut plus jouer.")    
@@ -487,7 +488,7 @@ class Game:
             # Si la cible n'est pas à portée, se rapprocher
 
             self.flip_display()
-         
+            # Mise à jour de la distance après déplacement
            
             if (enemy.x, enemy.y) in SHELTER_TILES:
                 print(f"L'unité {enemy.character_type} est dans un abri et ne peut pas attaquer.")
@@ -509,14 +510,14 @@ class Game:
                             comp_utilise=competence1
                         
                 
-                        print(f"L'ennemi {enemy.team} utilise {comp_utilise.name} sur une cible proche.")
+                    #print(f"L'ennemi {enemy.team} utilise {competence.name} sur une cible proche.")
 
                     # Afficher la zone d'attaque de l'ennemi en rouge pendant qu'il se prépare à attaquer
 
                     
                     else:
-
                         # Frapper à la zone la plus proche de la cible
+
 
                         if abs(enemy.x - target.x) > comp_utilise.range:
                             closest_x = enemy.x + (comp_utilise.range if enemy.x < target.x else -comp_utilise.range)
@@ -525,19 +526,19 @@ class Game:
                             closest_y = enemy.y + (comp_utilise.range if enemy.y < target.y else -comp_utilise.range)
 
                         print(f"L'ennemi {enemy.team} attaque la zone la plus proche de la cible ({closest_x}, {closest_y}).")
-                        #Limiter l'attaque à la portée
-                        if abs(closest_x - enemy.x) > comp_utilise.range:
-                            if closest_x > enemy.x:
-                                    closest_x -= (closest_x - enemy.x - comp_utilise.range)
-                            elif closest_x < enemy.x:
-                                    closest_x += (enemy.y - closest_x - comp_utilise.range)
 
-                        if abs(closest_y - enemy.y) > comp_utilise.range:
-                            if closest_y > enemy.y:
-                                    closest_y -= (closest_y - enemy.y - comp_utilise.range)
-                            elif closest_x < enemy.x:
-                                    closest_y += (enemy.y - closest_y - comp_utilise.range)
-                    
+                    if abs(closest_x - enemy.x) > comp_utilise.range:
+                        if closest_x > enemy.x:
+                                closest_x -= (closest_x - enemy.x - comp_utilise.range)
+                        elif closest_x < enemy.x:
+                                closest_x += (enemy.y - closest_x - comp_utilise.range)
+
+                    if abs(closest_y - enemy.y) > comp_utilise.range:
+                        if closest_y > enemy.y:
+                                closest_y -= (closest_y - enemy.y - comp_utilise.range)
+                        elif closest_x < enemy.x:
+                                closest_y += (enemy.y - closest_y - comp_utilise.range)
+
 
                     self.flip_display_with_enemy_target(enemy, comp_utilise, [closest_x, closest_y])
                     enemy.attack_zone(closest_x, closest_y, self.player1_units, comp_utilise)
@@ -555,40 +556,48 @@ class Game:
                         enemy.attack_zone(target.x, target.y, self.player1_units, comp_attack)    
                     elif  closest_ami.health<30:
                          self.flip_display_with_enemy_target(enemy, comp_sante, [closest_ami.x, closest_ami.y])
-                         enemy.heal(enemy,closest_ami)                      
-                else:
-                    # Frapper à la zone la plus proche de la cible
-                    closest_x=target.x
-                    closest_y=target.y
-                    comp_utilise=comp_attack
+                         enemy.heal(enemy,closest_ami,closest_ami)                      
+                    else:
+                        # Frapper à la zone la plus proche de la cible
+                        closest_x=target.x
+                        closest_y=target.y
+                        comp_utilise=comp_attack
 
-                    
+                        
 
-                    if abs(closest_x - enemy.x) > comp_utilise.range:
-                        if closest_x > enemy.x:
-                            closest_x -= (closest_x - enemy.x - comp_utilise.range)
-                        elif closest_x < enemy.x:
-                                closest_x += (enemy.y - closest_x - comp_utilise.range)
+                        if abs(closest_x - enemy.x) > comp_utilise.range:
+                            if closest_x > enemy.x:
+                                closest_x -= (closest_x - enemy.x - comp_utilise.range)
+                            elif closest_x < enemy.x:
+                                  closest_x += (enemy.y - closest_x - comp_utilise.range)
 
-                    if abs(closest_y - enemy.y) > comp_utilise.range:
-                        if closest_y > enemy.y:
-                            closest_y -= (closest_y - enemy.y - comp_utilise.range)
-                        elif closest_x < enemy.x:
-                            closest_y += (enemy.y - closest_y - comp_utilise.range)
-                    print(f"L'ennemi {enemy.team} attaque la zone la plus proche de la cible ({closest_x}, {closest_y}).")        
-                    self.flip_display_with_enemy_target(enemy, comp_utilise, [closest_x,closest_y])
-                    enemy.attack_zone(closest_y, closest_y, self.player1_units, comp_utilise)            
+                        if abs(closest_y - enemy.y) > comp_utilise.range:
+                            if closest_y > enemy.y:
+                                closest_y -= (closest_y - enemy.y - comp_utilise.range)
+                            elif closest_x < enemy.x:
+                                closest_y += (enemy.y - closest_y - comp_utilise.range)
+                        print(f"L'ennemi {enemy.team} attaque la zone la plus proche de la cible ({closest_x}, {closest_y}).")        
+                        self.flip_display_with_enemy_target(enemy, comp_utilise, [closest_x,closest_y])
+                        enemy.attack_zone(closest_y, closest_y, self.player1_units, comp_utilise)            
 
-                   
+                    # Verifier si l'enemy est a la porté on applique la competence d'attaque sinon on applique la santé
+                          
 
-                time.sleep(2) # Pause de 2 secondes pour visualiser l'attaque
+                # Pause de 2 secondes pour visualiser l'attaque
+
+
+
+
+
+
+
+                time.sleep(2)
 
             # Vérifie si la cible a été éliminée
             for target in self.player1_units[:]:
                 if target.health <= 0:
                     print(f"L'unité du joueur en position ({target.x}, {target.y}) est éliminée.")
                     self.player1_units.remove(target)
-                    
 
     def flip_display_with_enemy_target(self, enemy, competence, target):
    

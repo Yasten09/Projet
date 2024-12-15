@@ -15,7 +15,23 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 PURPLE = (128, 0, 128)
-INACCESSIBLE_TILES = [(6, 0), (6, 1), (6, 2),(6, 3),(6, 4),(7, 0),(7, 1), (7, 2),(7, 3),(7, 4),(7, 5),(7,7),(8,5),(8, 7),(8, 8),(8, 9),(9,8),(9,9),(9, 10),(9, 11),(9, 12),(9, 14),(9, 15),(10,8),(10,9),(10, 10),(10, 11),(10, 12),(10, 14),(10, 15)]
+
+#Case inaccessible 
+INACCESSIBLE_TILES = [
+    (6, 0), (6, 1), (6, 2), (6, 3), (6, 4),
+    (7, 0), (7, 1), (7, 2), (7, 3), (7, 4), (7, 5), (7, 7),
+    (8, 5), (8, 7), (8, 8), (8, 9),
+    (9, 8), (9, 9), (9, 10), (9, 11), (9, 12), (9, 14), (9, 15),
+    (10, 8), (10, 9), (10, 10), (10, 11), (10, 12), (10, 14), (10, 15)
+]
+
+
+for x in range(0, 16):  
+    if (x, 16) not in INACCESSIBLE_TILES:  
+        INACCESSIBLE_TILES.append((x, 16))
+    if (x,17) not in INACCESSIBLE_TILES :
+        INACCESSIBLE_TILES.append((x, 16))     
+
 # Cases qui réduisent la santé
 # Cases où les unités sont protégées
 DAMAGE_AMOUNT = 10  # Quantité de santé retirée
