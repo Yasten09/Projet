@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.2" tiledversion="1.2.0" orientation="orthogonal" renderorder="right-down" width="20" height="16" tilewidth="48" tileheight="48" infinite="0" nextlayerid="10" nextobjectid="35">
- <tileset firstgid="1" source="sol.tsx"/>
- <tileset firstgid="121" source="volcan.tsx"/>
- <tileset firstgid="153" source="volcan2.tsx"/>
+ <tileset firstgid="1" source="map/sol.tsx"/>
+ <tileset firstgid="121" source="map/volcan.tsx"/>
+ <tileset firstgid="153" source="map/volcan2.tsx"/>
  <layer id="1" name="sol" width="20" height="16">
   <data encoding="csv">
 59,59,59,59,59,59,59,59,59,59,59,59,59,59,59,59,59,59,59,59,

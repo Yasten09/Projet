@@ -19,7 +19,7 @@ INACCESSIBLE_TILES = [(6, 0), (6, 1), (6, 2),(6, 3),(6, 4),(7, 0),(7, 1), (7, 2)
 # Cases qui réduisent la santé
 # Cases où les unités sont protégées
 DAMAGE_AMOUNT = 10  # Quantité de santé retirée
-SHELTER_TILES = [(3, 1), (3, 5), (6, 6), (1, 2), (2, 1), (4, 3), (15, 3), (13, 3), (5, 9), (9, 6)]
+SHELTER_TILES = [(3, 1), (3, 5), (6, 6), (1, 2), (2, 1), (4, 3), (15, 3), (13, 3), (5, 9), (9, 6),(12,12),(12,14),(14,10)]
 
 # Cases qui réduisent la santé
 DAMAGE_TILES = [(3, 3), (5, 5), (2, 8), (2, 15), (1, 15), (3, 8), (12, 8), (13, 15), (13, 2), (13, 5), (8, 4), (6, 9)]
@@ -40,21 +40,23 @@ safe_image = pygame.transform.scale(safe_image, (CELL_SIZE, CELL_SIZE))
 
 
 
+
+
 class Competence:
     """
     Classe pour représenter une compétence.
     """
-    def __init__(self, name, range, area):
+    def __init__(self, name, range, area,attack_power):
         self.name = name
         self.range = range
         self.area = area  # Coordonnées relatives pour la zone d'effet
-
+        self.attack_power=attack_power
     def __repr__(self):
-        return f"Competence(name={self.name}, range={self.range}, area={self.area})"
+        return f"Competence(name={self.name}, range={self.range}, area={self.area}, attack power= {self.attack_power})"
 class FastMove(Competence):
     def __init__(self):
         # La compétence "Fast Move" n'a pas de portée spécifique ni de zone d'effet
-        super().__init__(name="Fast Move", range=0, area=[])
+        super().__init__(name="Fast Move", range=0, area=[],attack_power=0)
 
     def apply(self, unit, dx, dy):
         """Applique la compétence Fast Move : déplace l'unité de 3 cases dans la direction spécifiée (dx, dy)."""
@@ -74,11 +76,11 @@ class Unit:
     """
     Classe pour représenter une unité avec des images.
     """
-    def __init__(self, x, y, max_health,max_move,remaining_move, health, attack_power, team, character_type, competences=None):
+    def __init__(self, x, y, max_health,max_move,remaining_move, health,  team, character_type, competences=None):
         self.x = x
         self.y = y
         self.health = health
-        self.attack_power = attack_power
+        
         self.max_move = max_move
         self.remaining_move = max_move
         self.max_health = health
@@ -90,10 +92,10 @@ class Unit:
 
         # Chargement de l'image du personnage
         image_map = {
-            "naruto": "images/naruto.png",
-            "uchiwa": "images/uchiwa.png",
-            "haruno": "images/haruno.png",
-            "madara": "images/madara.png"
+            "Naruto": "images/naruto.png",
+            "Sassuke": "images/Sassuke.png",
+            "Sakura": "images/Sakura.png",
+            "Madara": "images/madara.png"
         }
         image_path = image_map.get(self.character_type, "images/default.png")
 
@@ -127,7 +129,7 @@ class Unit:
                       # Décrémenter le nombre de déplacements restants
 
 
-                print(f"Case ({new_x}, {new_y}) inaccessible.")
+                #print(f"Case ({new_x}, {new_y}) inaccessible.")
 
                 if (new_x, new_y) in DAMAGE_TILES:
                     self.health -= DAMAGE_AMOUNT
@@ -161,7 +163,7 @@ class Unit:
                             print(f"L'unité {unit.character_type} est dans un abri et ne peut pas être attaquée.")
                         else:
                             print(f"{self.character_type} attaque {unit.character_type} à ({target_x}, {target_y})")
-                            unit.health -= self.attack_power
+                            unit.health -= competence.attack_power
                             if unit.health <= 0:
                                 print(f"{unit.character_type} a été éliminé(e) !")
                         break
@@ -172,9 +174,9 @@ class Unit:
         target.health += 20              # Ajoute 5 points de vie à la cible
         target.health = max(target.health, 50)              # Limite la santé au maximum (par exemple 10)
 class UnitWithHealthBar(Unit):
-    def __init__(self, x, y, health, max_health, remaining_move, attack_power, team, character_type, competences, max_move):
+    def __init__(self, x, y, health, max_health, remaining_move,  team, character_type, competences, max_move):
         # Appeler le constructeur de la classe parente (Unit)
-        super().__init__(x, y, max_health, max_move, remaining_move, health, attack_power, team, character_type, competences)
+        super().__init__(x, y, max_health, max_move, remaining_move, health,  team, character_type, competences)
         
         # Initialiser les attributs spécifiques à UnitWithHealthBar
         self.remaining_move = remaining_move  # Déplacements restants
@@ -234,20 +236,7 @@ class UnitWithHealthBar(Unit):
             safe_y = safe_tile[1] * CELL_SIZE
             screen.blit(safe_image, (safe_x, safe_y))            
     # Méthode d'attaque
-    def attack(self, target):
-        if self.health > 0:
-            #print(f"{self.name} attaque {target.name}")
 
-            # Exemple de calcul de dégâts (vous pouvez personnaliser la logique)
-            damage = 10  # Définir une logique de dégâts plus complexe ici
-            target.health -=self.attack_power
-
-            # Affichage des dégâts infligés
-            print(f"{target.name} perd {damage} points de vie. Santé restante: {target.health}")
-            if target.health <= 0:
-                print(f"{target.name} est mort.")
-        else:
-            print(f"{self.character_type} ne peut pas attaquer car il est mort.")
 
 
 class Game:
@@ -261,20 +250,20 @@ class Game:
 
 
         # Définition des compétences
-        explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
+        explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)],attack_power=20)
         fast_move = FastMove()
 
         # Initialisation des unités des deux joueurs
         self.player1_units = [
-            UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=6, attack_power=6, team='player1', character_type="naruto", competences=[],max_move=6),
-            #UnitWithHealthBar(1, 0, health=80, max_health=100,remaining_move=7, attack_power=25, team='player1', character_type="uchiwa", competences=[tir_precis],max_move=5),
-             UnitWithHealthBar(2, 0, health=80, max_health=100,remaining_move=6, attack_power=6, team='player1', character_type="uchiwa", competences=[],max_move=6)                 
+            UnitWithHealthBar(0, 0, health=100, max_health=100,remaining_move=6,  team='player1', character_type="Naruto", competences=[],max_move=6),
+            #UnitWithHealthBar(1, 0, health=80, max_health=100,remaining_move=7,  team='player1', character_type="Sassuke", competences=[tir_precis],max_move=5),
+             UnitWithHealthBar(2, 0, health=80, max_health=100,remaining_move=6,  team='player1', character_type="Sassuke", competences=[],max_move=6)                 
         ]
 
         self.player2_units = [
-            UnitWithHealthBar(6, 6, health=100, max_health=100,remaining_move=6, attack_power=15, team='player2', character_type="haruno", competences=[],max_move=6),
-            #UnitWithHealthBar(7, 6, health=90, max_health=100,remaining_move=3, attack_power=30, team='player2', character_type="madara", competences=[tir_precis],max_move=4),
-             UnitWithHealthBar(5, 6, health=80, max_health=100,remaining_move=6, attack_power=25, team='player2', character_type="uchiwa", competences=[],max_move=6)
+            UnitWithHealthBar(6, 6, health=100, max_health=100,remaining_move=6,  team='player2', character_type="Sakura", competences=[],max_move=6),
+            #UnitWithHealthBar(7, 6, health=90, max_health=100,remaining_move=3, , team='player2', character_type="Madara", competences=[tir_precis],max_move=4),
+             UnitWithHealthBar(5, 6, health=80, max_health=100,remaining_move=6,  team='player2', character_type="Sassuke", competences=[],max_move=6)
         ]
 
         # Chargement de la carte Tiled (.tmx)
@@ -288,12 +277,12 @@ class Game:
         pygame.mixer.init()  # Initialiser le module audio
         font = pygame.font.Font(None, 48)
         options = ["1. Player vs Player", "2. Player vs IA"]
-        selected_option = 0# Charger l'image de fond
-        mode_image = pygame.image.load("mode.png")  # Remplacez par le chemin de votre image
+        selected_option = 0 # Charger l'image de fond
+        mode_image = pygame.image.load("mode2.png")  
         mode_image = pygame.transform.scale(mode_image, (WIDTH, HEIGHT))  # Ajuster à la taille de l'écran
 
         try:
-           pygame.mixer.music.load("mode.mp3")  # Remplacez par le chemin de votre musique
+           pygame.mixer.music.load("mode.mp3")  
            pygame.mixer.music.play(-1)  # Joue en boucle (-1)
         except pygame.error as e:
            print(f"Erreur de chargement de la musique : {e}")
@@ -302,12 +291,24 @@ class Game:
 
         while True:
             screen.fill(BLACK)
-            # Si l'image est chargée, l'afficher
             if mode_image:
                 screen.blit(mode_image, (0, 0))
             for i, option in enumerate(options):
                 color = (255,0, 0) if i == selected_option else WHITE
                 text = font.render(option, True, color)
+                # pour que le text au debut soit visible on ajoute un fond qui un est un rectangle 
+                rect_x = WIDTH // 2 - text.get_width() // 2 - 10 
+                rect_y = HEIGHT // 2 - 100 + i * 50 - 5
+                rect_width = text.get_width() + 20
+                rect_height = text.get_height() + 10
+
+                # Créer une surface pour le fond 
+                bg_surface = pygame.Surface((rect_width, rect_height))
+                bg_surface.set_alpha(128)  # Transparence (0 = transparent, 255 = opaque)
+                bg_surface.fill((0, 0, 0))  # Fond noir
+                screen.blit(bg_surface, (rect_x, rect_y))  # Afficher le fond
+
+                # Afficher le texte par-dessus le fond
                 screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 100 + i * 50))
 
             pygame.display.flip()
@@ -330,10 +331,11 @@ class Game:
         if self.is_player_eliminated(self.player1_units):
             self.winner = "Player 2"  # Player 2 gagne
             self.gameover=1
+            print("we have a winner")
         elif self.is_player_eliminated(self.player2_units):
             self.winner = "Player 1"  # Player 1 gagne
             self.gameover=1
-        print("we have a winner")    
+            print("we have a winner")    
         self.display_winner()
     
     def is_player_eliminated(self, player_units):
@@ -389,23 +391,25 @@ class Game:
 
                     if event.type == pygame.KEYDOWN:
                         dx, dy = 0, 0   
-                        if event.key == pygame.K_LEFT:
-                            dx = -1
-                        elif event.key == pygame.K_RIGHT:
-                            dx = 1
-                        elif event.key == pygame.K_UP:
-                            dy = -1
-                        elif event.key == pygame.K_DOWN:
-                            dy = 1
-                        if any(isinstance(comp, FastMove) for comp in selected_unit.competences):
-                            fast_move = next(comp for comp in selected_unit.competences if isinstance(comp, FastMove))
-                            fast_move.apply(selected_unit, dx, dy)  # Applique le déplacement de 3 cases
-                        else:
-                            isFastMove=False
-                            selected_unit.move(dx, dy,isFastMove)
+                        if event.key in [pygame.K_LEFT,pygame.K_RIGHT,pygame.K_UP,pygame.K_DOWN]:
+
+                            if event.key == pygame.K_LEFT:
+                                dx = -1
+                            elif event.key == pygame.K_RIGHT:
+                                dx = 1
+                            elif event.key == pygame.K_UP:
+                                dy = -1
+                            elif event.key == pygame.K_DOWN:
+                                dy = 1
+                            if any(isinstance(comp, FastMove) for comp in selected_unit.competences):
+                                fast_move = next(comp for comp in selected_unit.competences if isinstance(comp, FastMove))
+                                fast_move.apply(selected_unit, dx, dy)  # Applique le déplacement de 3 cases
+                            else:
+                                isFastMove=False
+                                selected_unit.move(dx, dy,isFastMove)
 
 
-                        self.flip_display()
+                            self.flip_display()
                         if event.key == pygame.K_s or event.key == pygame.K_SPACE:
                             if (selected_unit.x, selected_unit.y) in SHELTER_TILES:
                                 print(f"L'unité {selected_unit.character_type} est dans un abri et ne peut pas attaquer.")
@@ -413,14 +417,14 @@ class Game:
                                 selected_unit.is_selected = False
                                 continue
                             if event.key == pygame.K_s and selected_unit.competences:
-                                if selected_unit.competences[1].name in ("Tir précis","Explosion","Soin") :
+                                if selected_unit.competences[1].name in ("Tir précis","Explosion","Soin","Fusil") :
                                     competence = selected_unit.competences[1]
                                     i=1
                                 else :
                                     competence = selected_unit.competences[0]
                                     i=0
                             elif event.key == pygame.K_SPACE: 
-                                if selected_unit.competences[0].name in  ("Tir précis","Explosion","Soin") :
+                                if selected_unit.competences[0].name in  ("Tir précis","Explosion","Soin","Fusil") :
                                     i=0
                                     competence = selected_unit.competences[0]
                                 else:
@@ -484,7 +488,7 @@ class Game:
 
                                                 
                                                             break
-                            elif competence.name == "Explosion" or competence.name == "Tir précis" :
+                            elif competence.name == "Explosion" or competence.name == "Tir précis" or competence.name=="Fusil":
                                     if selected_unit.competences:
                                         competence = selected_unit.competences[i]
                                         print(f"{player_name} utilise la compétence : {competence.name}")
@@ -714,21 +718,7 @@ class Game:
                     print(f"L'unité du joueur en position ({target.x}, {target.y}) est éliminée.")
                     self.player1_units.remove(target)
                     
-    def flip_display(self):
-        """Affiche le jeu."""
-        self.screen.fill(BLACK)
 
-        # Dessiner la grille
-        for x in range(0, WIDTH, CELL_SIZE):
-            for y in range(0, HEIGHT, CELL_SIZE):
-                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-                pygame.draw.rect(self.screen, WHITE, rect, 1)
-
-        # Dessiner les unités
-        for unit in self.player_units + self.enemy_units:
-            unit.draw(self.screen)
-
-        pygame.display.flip()
     def flip_display_with_enemy_target(self, enemy, competence, target):
         """Affiche le jeu avec le curseur de ciblage et la portée de l'attaque de l'ennemi."""
         #self.screen.fill(BLACK)
@@ -757,42 +747,12 @@ class Game:
         pygame.draw.rect(self.screen, RED, rect, 3)  # Vert pour le curseur de ciblage
 
         pygame.display.flip()
-    def flip_display_with_target(self, cx, cy, unit, competence):
-        """Affiche le jeu avec le curseur de ciblage et la portée de l'attaque de l'ennemi."""
-        self.screen.fill(BLACK)
 
-        # Dessiner la grille
-        for x in range(0, WIDTH, CELL_SIZE):
-            for y in range(0, HEIGHT, CELL_SIZE):
-                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-                pygame.draw.rect(self.screen, WHITE, rect, 1)
-
-        # Afficher la portée de la compétence
-        for dx in range(-competence.range, competence.range + 1):
-            for dy in range(-competence.range, competence.range + 1):
-                if 0 <= unit.x + dx < GRID_SIZE and 0 <= unit.y + dy < GRID_SIZE:
-                    rect = pygame.Rect((unit.x + dx) * CELL_SIZE, (unit.y + dy) * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-                    pygame.draw.rect(self.screen, (50, 50, 200), rect, 1)  # Bleu clair pour la portée
-
-        # Dessiner les unités
-        for u in self.player1_units + self.player2_units:
-            u.draw(self.screen)
-
-        # Dessiner la zone d'attaque de l'ennemi en rouge
-        for dx, dy in competence.area:
-            tx, ty = cx + dx, cy + dy  # Coordonnées des cases affectées
-            if 0 <= tx < GRID_SIZE and 0 <= ty < GRID_SIZE:
-                rect = pygame.Rect(tx * CELL_SIZE, ty * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-                pygame.draw.rect(self.screen, RED, rect, 2)  # Rouge pour la zone d'attaque
-
-        # Dessiner le curseur de ciblage de l'ennemi
-        rect = pygame.Rect(cx * CELL_SIZE, cy * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-        pygame.draw.rect(self.screen, RED, rect, 3)  # Vert pour le curseur de ciblage
 
     def flip_display(self):
         """Affiche le jeu avec la carte et les unités."""
         
-
+        
         # Afficher la carte Tiled
         if self.tmx_data:
             for layer in self.tmx_data.visible_layers:
@@ -804,10 +764,7 @@ class Game:
                                 self.screen.blit(tile_image, (x * CELL_SIZE, y * CELL_SIZE))
 
         # Affichage des unités et de la grille
-        for x in range(0, WIDTH, CELL_SIZE):
-            for y in range(0, HEIGHT, CELL_SIZE):
-                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-                pygame.draw.rect(self.screen, WHITE, rect, 1)
+
 
         for unit in self.player1_units + self.player2_units:
             if unit.health > 0:
@@ -829,10 +786,7 @@ class Game:
                             if tile_image:
                                 self.screen.blit(tile_image, (x * CELL_SIZE, y * CELL_SIZE))
 
-        for x in range(0, WIDTH, CELL_SIZE):
-            for y in range(0, HEIGHT, CELL_SIZE):
-                rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
-                pygame.draw.rect(self.screen, WHITE, rect, 1)
+
 
         for dx in range(-competence.range, competence.range + 1):
             for dy in range(-competence.range, competence.range + 1):
@@ -892,18 +846,18 @@ class CompetenceSelector:
 
                     # Afficher le message
                     title_text = self.font.render(
-                        f"{player_name} - Sélectionnez la compétence {i + 1} pour l'unité en ({unit.x}, {unit.y})", True, WHITE
+                        f"{player_name} - Sélectionnez la compétence {i + 1} pour {unit.character_type}", True, WHITE
                     )
-                    if unit.character_type=="naruto":
-                        pathimage="MenuChoix/NarutoChoose.jpg"
-                    if unit.character_type=="uchiwa":
-                        pathimage="MenuChoix/UchiwaChoose.jpg"
-                    if unit.character_type=="haruno":
-                        pathimage= "MenuChoix/HarunoChoose.jpg"    
-                    if unit.character_type=="itachi": 
+                    if unit.character_type=="Naruto":
+                        pathimage="MenuChoix/NarutoChoose.png"
+                    if unit.character_type=="Sassuke":
+                        pathimage="MenuChoix/SassukeChoose.jpg"
+                    if unit.character_type=="Sakura":
+                        pathimage= "MenuChoix/SakuraChoose.jpg"    
+                    if unit.character_type=="Itachi": 
                         pathimage= "MenuChoix/ItachiChoose.jpg" 
-                    if unit.character_type=="madara": 
-                        pathimage= "MenuChoix/MadaraChoose.png"    
+                    if unit.character_type=="Madara": 
+                        pathimage= "MenuChoix/MadaraChoose.jpg"    
        
 
                     
@@ -912,13 +866,40 @@ class CompetenceSelector:
                     unitimage = pygame.transform.scale(unitimage1, (1000, 1000))
                     image_rect = unitimage.get_rect(center=(WIDTH // 2, 150*3))
                     self.screen.blit(unitimage, image_rect)
+                    rect_x = WIDTH // 2 - title_text.get_width() // 2-10
+                    rect_y = 45
+                    rect_width = title_text.get_width() + 20
+                    rect_height = title_text.get_height() + 10
+
+                    # Ajouter un fond rectangulaire semi-transparent
+                    rect_surface = pygame.Surface((rect_width, rect_height))
+                    rect_surface.set_alpha(128)  # Transparence (0 = invisible, 255 = opaque)
+                    rect_surface.fill((0, 0, 0))  # Couleur noire
+                    self.screen.blit(rect_surface, (rect_x, rect_y))                   
                     self.screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, 50))
                     # Afficher les compétences disponibles
                     for index, competence in enumerate(self.available_competences):
                         color = GREEN if index == selected_index else WHITE
-                        competence_text = self.font.render(
-                            f"{competence.name} - Portée: {competence.range}", True, color
-                        )
+                        if competence.name in ["Explosion", "Tir précis","Fusil"]:
+                            competence_text = self.font.render(
+                                f"{competence.name} - Portée: {competence.range} - Zone d'effet: {len(competence.area)} - Attack Power : {competence.attack_power}", True, color
+                            )
+                        else: 
+                            competence_text = self.font.render(
+                                f"{competence.name} ", True, color)
+
+                        rect_x = 90
+                        rect_y = 145 + index * 40
+                        rect_width = competence_text.get_width() + 20
+                        rect_height = competence_text.get_height() + 10
+
+                        # Ajouter un fond rectangulaire semi-transparent
+                        rect_surface = pygame.Surface((rect_width, rect_height))
+                        rect_surface.set_alpha(128)  # Transparence (0 = invisible, 255 = opaque)
+                        rect_surface.fill((0, 0, 0))  # Couleur noire
+                        self.screen.blit(rect_surface, (rect_x, rect_y))
+
+                        # Dessiner le texte
                         self.screen.blit(competence_text, (100, 150 + index * 40))
 
                     pygame.display.flip()
@@ -976,8 +957,8 @@ class CharacterSelectionMenu:
         - Une liste de noms de personnages sélectionnés.
         """
         #fond d'ecran 
-        imagea = pygame.image.load("images/FondNaruto2.webp")
-        imageb = pygame.transform.scale(imagea, (700, 700))
+        imagea = pygame.image.load("images/FondNaruto4.png")
+        imageb = pygame.transform.scale(imagea, (960, 760))
         image_rect = imageb.get_rect(center=(WIDTH // 2, HEIGHT//2))
         self.screen.blit(imageb, image_rect)
         selected_characters = []
@@ -1006,7 +987,7 @@ class CharacterSelectionMenu:
 
                     # Afficher le nom du personnage
                     color = GREEN if index == selected_index else WHITE
-                    character_text = self.font.render(character, True, WHITE)
+                    character_text = self.font.render(character, True, [250,250,110])
                     self.screen.blit(character_text, (x_pos + 120, y_pos + 50))
 
                     # Encadrer l'image du personnage sélectionné
@@ -1047,18 +1028,19 @@ if __name__ == "__main__":
     game_mode =Game.select_game_mode(screen)
 
     # Compétences disponibles
-    explosion = Competence(name="Explosion", range=2, area=[(0, 0), (1, 0), (0, 1), (1, 1)])
-    tir_precis = Competence(name="Tir précis", range=4, area=[(0, 0)])
-    soin = Competence(name="Soin", range=2, area=[(0, 0)])
+    explosion = Competence(name="Explosion", range=3, area=[(0, 0), (1, 0), (0, 1), (1, 1)],attack_power=20)
+    tir_precis = Competence(name="Tir précis", range=5, area=[(0, 0)],attack_power=15)
+    Fusil= Competence(name="Fusil", range=4, area=[(0, 0),[0,1]],attack_power=25)
+    soin = Competence(name="Soin", range=3, area=[(0, 0)],attack_power=0)
     fast_move=FastMove()
 
-    available_characters = ["naruto", "uchiwa", "haruno", "itachi","madara"]
+    available_characters = ["Naruto", "Sassuke", "Sakura", "Itachi","Madara"]
     character_images = {
-        "naruto": pygame.transform.scale(pygame.image.load("images/naruto.png"), (100, 100)),
-         "madara": pygame.transform.scale(pygame.image.load("images/madara.png"), (100, 100)),
-        "uchiwa": pygame.transform.scale(pygame.image.load("images/uchiwa.png"), (100, 100)),
-        "haruno": pygame.transform.scale(pygame.image.load("images/haruno.png"), (100, 100)),
-        "itachi": pygame.transform.scale(pygame.image.load("images/itachi.png"), (100, 100))
+        "Naruto": pygame.transform.scale(pygame.image.load("images/naruto.png"), (100, 100)),
+         "Madara": pygame.transform.scale(pygame.image.load("images/madara.png"), (100, 100)),
+        "Sassuke": pygame.transform.scale(pygame.image.load("images/Sassuke.png"), (100, 100)),
+        "Sakura": pygame.transform.scale(pygame.image.load("images/Sakura.png"), (100, 100)),
+        "Itachi": pygame.transform.scale(pygame.image.load("images/itachi.png"), (100, 100))
     }
 
     # Initialisation du menu de sélection des personnages
@@ -1077,7 +1059,7 @@ if __name__ == "__main__":
         unit.character_type = player2_characters[i]
         unit.image = pygame.image.load(f"images/{unit.character_type}.png")
         unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))
-    competences_disponibles = [explosion, tir_precis, soin,fast_move]
+    competences_disponibles = [explosion, tir_precis, soin,Fusil,fast_move]
 
     # Initialisation du sélecteur de compétences
     competence_selector = CompetenceSelector(screen, competences_disponibles)
