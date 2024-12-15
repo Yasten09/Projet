@@ -87,9 +87,9 @@ class Game:
         ]
 
         self.player2_units = [
-            UnitWithHealthBar(6, 6, health=100, max_health=100,remaining_move=6,  team='player2', character_type="Sakura", competences=[],max_move=6),
+            UnitWithHealthBar(5, 6, health=100, max_health=100,remaining_move=6,  team='player2', character_type="Sakura", competences=[],max_move=6),
             #UnitWithHealthBar(7, 6, health=90, max_health=100,remaining_move=3, , team='player2', character_type="Madara", competences=[tir_precis],max_move=4),
-             UnitWithHealthBar(5, 6, health=80, max_health=100,remaining_move=6,  team='player2', character_type="Sassuke", competences=[],max_move=6)
+             UnitWithHealthBar(4,6 , health=80, max_health=100,remaining_move=6,  team='player2', character_type="Sassuke", competences=[],max_move=6)
         ]
 
         # Chargement de la carte Tiled (.tmx)
@@ -98,6 +98,51 @@ class Game:
         except Exception as e:
             print(f"Erreur lors du chargement de la carte : {e}")
             self.tmx_data = None
+    def characterSelect(screen):
+        available_characters = ["Naruto", "Sassuke", "Sakura", "Itachi","Madara"]
+        character_images = {
+            "Naruto": pygame.transform.scale(pygame.image.load("images/naruto.png"), (100, 100)),
+            "Madara": pygame.transform.scale(pygame.image.load("images/madara.png"), (100, 100)),
+            "Sassuke": pygame.transform.scale(pygame.image.load("images/Sassuke.png"), (100, 100)),
+            "Sakura": pygame.transform.scale(pygame.image.load("images/Sakura.png"), (100, 100)),
+            "Itachi": pygame.transform.scale(pygame.image.load("images/itachi.png"), (100, 100))
+        }
+
+        # Initialisation du menu de sélection des personnages
+        character_menu = CharacterSelectionMenu(screen, available_characters, character_images)
+
+        # Sélection des personnages pour chaque joueur
+        player1_characters = character_menu.select_characters("Player 1")
+        player2_characters = character_menu.select_characters("Player 2")
+        # Assignation des personnages choisis aux unités
+        for i, unit in enumerate(game.player1_units):
+            unit.character_type = player1_characters[i]
+            unit.image = pygame.image.load(f"images/{unit.character_type}.png")
+            unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))
+
+        for i, unit in enumerate(game.player2_units):
+            unit.character_type = player2_characters[i]
+            unit.image = pygame.image.load(f"images/{unit.character_type}.png")
+            unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))        
+    def competenceSelect(screen)   :
+                # Compétences disponibles
+        explosion = Competence(name="Explosion", range=3, area=[(0, 0), (1, 0), (0, 1), (1, 1)],attack_power=20)
+        tir_precis = Competence(name="Tir précis", range=5, area=[(0, 0)],attack_power=15)
+        Fusil= Competence(name="Fusil", range=4, area=[(0, 0),[0,1]],attack_power=25)
+        soin = Competence(name="Soin", range=3, area=[(0, 0)],attack_power=0)
+        fast_move=FastMove()
+        
+        competences_disponibles = [explosion, tir_precis, soin,Fusil,fast_move]
+
+   
+        competence_selector = CompetenceSelector(screen, competences_disponibles)
+
+   
+        competence_selector.choose_competences(game.player1_units, "Player 1")
+
+
+        competence_selector.choose_competences(game.player2_units, "Player 2")
+     
     def select_game_mode(screen):
         """Affiche un menu pour sélectionner le mode de jeu."""
         pygame.mixer.init()  # Initialiser le module audio
@@ -631,49 +676,11 @@ if __name__ == "__main__":
     game = Game(screen)
     game_mode =Game.select_game_mode(screen)
 
-    # Compétences disponibles
-    explosion = Competence(name="Explosion", range=3, area=[(0, 0), (1, 0), (0, 1), (1, 1)],attack_power=20)
-    tir_precis = Competence(name="Tir précis", range=5, area=[(0, 0)],attack_power=15)
-    Fusil= Competence(name="Fusil", range=4, area=[(0, 0),[0,1]],attack_power=25)
-    soin = Competence(name="Soin", range=3, area=[(0, 0)],attack_power=0)
-    fast_move=FastMove()
 
-    available_characters = ["Naruto", "Sassuke", "Sakura", "Itachi","Madara"]
-    character_images = {
-        "Naruto": pygame.transform.scale(pygame.image.load("images/naruto.png"), (100, 100)),
-         "Madara": pygame.transform.scale(pygame.image.load("images/madara.png"), (100, 100)),
-        "Sassuke": pygame.transform.scale(pygame.image.load("images/Sassuke.png"), (100, 100)),
-        "Sakura": pygame.transform.scale(pygame.image.load("images/Sakura.png"), (100, 100)),
-        "Itachi": pygame.transform.scale(pygame.image.load("images/itachi.png"), (100, 100))
-    }
-
-    # Initialisation du menu de sélection des personnages
-    character_menu = CharacterSelectionMenu(screen, available_characters, character_images)
-
-    # Sélection des personnages pour chaque joueur
-    player1_characters = character_menu.select_characters("Player 1")
-    player2_characters = character_menu.select_characters("Player 2")
-    # Assignation des personnages choisis aux unités
-    for i, unit in enumerate(game.player1_units):
-        unit.character_type = player1_characters[i]
-        unit.image = pygame.image.load(f"images/{unit.character_type}.png")
-        unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))
-
-    for i, unit in enumerate(game.player2_units):
-        unit.character_type = player2_characters[i]
-        unit.image = pygame.image.load(f"images/{unit.character_type}.png")
-        unit.image = pygame.transform.scale(unit.image, (CELL_SIZE, CELL_SIZE))
-    competences_disponibles = [explosion, tir_precis, soin,Fusil,fast_move]
-
-   
-    competence_selector = CompetenceSelector(screen, competences_disponibles)
-
-   
-    competence_selector.choose_competences(game.player1_units, "Player 1")
+    Game.characterSelect(screen)
 
 
-    competence_selector.choose_competences(game.player2_units, "Player 2")
-
+    Game.competenceSelect(screen)
   
     while not game.gameover:
         game.check_game_over()
