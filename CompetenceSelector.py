@@ -18,17 +18,8 @@ BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 PURPLE = (128, 0, 128)
 
-
-
-
-
-
-
-
 class CompetenceSelector:
-    """
-    Classe pour gérer la sélection des compétences pour les unités.
-    """
+
     def __init__(self, screen, available_competences, font_size=36):
 
         self.screen = screen
@@ -53,6 +44,7 @@ class CompetenceSelector:
                     title_text = self.font.render(
                         f"{player_name} - Sélectionnez la compétence {i + 1} pour {unit.character_type}", True, WHITE
                     )
+                    #Afficher les images dans le menu choix des competences
                     if unit.character_type=="Naruto":
                         pathimage="MenuChoix/NarutoChoose.png"
                     if unit.character_type=="Sassuke":

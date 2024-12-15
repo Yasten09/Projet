@@ -1,5 +1,3 @@
-
-
 import pygame
 import pytmx
 import random
@@ -17,21 +15,7 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
 PURPLE = (128, 0, 128)
-# Les cases inaccessibles
-INACCESSIBLE_TILES = [
-    (6, 0), (6, 1), (6, 2), (6, 3), (6, 4),
-    (7, 0), (7, 1), (7, 2), (7, 3), (7, 4), (7, 5), (7, 7),
-    (8, 5), (8, 7), (8, 8), (8, 9),
-    (9, 8), (9, 9), (9, 10), (9, 11), (9, 12), (9, 14), (9, 15),
-    (10, 8), (10, 9), (10, 10), (10, 11), (10, 12), (10, 14), (10, 15)
-]
-
-
-for x in range(0, 16):  
-    if (x, 16) not in INACCESSIBLE_TILES:  
-        INACCESSIBLE_TILES.append((x, 16))
-
-
+INACCESSIBLE_TILES = [(6, 0), (6, 1), (6, 2),(6, 3),(6, 4),(7, 0),(7, 1), (7, 2),(7, 3),(7, 4),(7, 5),(7,7),(8,5),(8, 7),(8, 8),(8, 9),(9,8),(9,9),(9, 10),(9, 11),(9, 12),(9, 14),(9, 15),(10,8),(10,9),(10, 10),(10, 11),(10, 12),(10, 14),(10, 15)]
 # Cases qui réduisent la santé
 # Cases où les unités sont protégées
 DAMAGE_AMOUNT = 10  # Quantité de santé retirée
@@ -44,7 +28,6 @@ DAMAGE_TILES = [(3, 3), (5, 5), (2, 8), (2, 15), (1, 15), (3, 8), (12, 8), (13, 
 # Liste des cases en feu
 active_fire_tiles = []
 
-
 # Charger l'image de feu
 fire_image = pygame.image.load("images/feu.png")
 fire_image = pygame.transform.scale(fire_image, (CELL_SIZE, CELL_SIZE))
@@ -52,6 +35,9 @@ fire_image = pygame.transform.scale(fire_image, (CELL_SIZE, CELL_SIZE))
 
 safe_image = pygame.image.load("images/safe.webp")
 safe_image = pygame.transform.scale(safe_image, (CELL_SIZE, CELL_SIZE))
+
+
+
 
 
 
@@ -83,12 +69,15 @@ class Unit:
         }
         image_path = image_map.get(self.character_type, "images/default.png")
 
-      
-        self.image = pygame.image.load(image_path)
-
+        try:
+            self.image = pygame.image.load(image_path)
+        except pygame.error:
+            print(f"Image {image_path} introuvable. Utilisation de l'image par défaut.")
+            self.image = pygame.image.load("images/default.png")
+            self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))
 
     def move(self, dx, dy,is_fast_move=False):
-        
+    
         
         if self.remaining_move > 0:
             move_distance = 3 if is_fast_move else 1
@@ -107,7 +96,7 @@ class Unit:
                     self.x = new_x
                     self.y = new_y
                     
-                     
+                      # Décrémenter le nombre de déplacements restants
 
 
                 #print(f"Case ({new_x}, {new_y}) inaccessible.")
@@ -126,13 +115,13 @@ class Unit:
             if i==1:
                 self.remaining_move-=1
     def draw(self, screen):
-
+     
         draw_x = self.x * CELL_SIZE
         draw_y = self.y * CELL_SIZE
         screen.blit(self.image, (draw_x, draw_y))
 
     def attack_zone(self, cx, cy, opponent_units, competence):
-        
+       
         for dx, dy in competence.area:
             target_x = cx + dx
             target_y = cy + dy
@@ -149,36 +138,35 @@ class Unit:
                                 print(f"{unit.character_type} a été éliminé(e) !")
                         break
 
-    def heal(self,user, target):      #fonction soigne les allier
+    def heal(self,user, target, units):      #fonction soigne les allier
     
-        print(f"{user.character_type} utilise Soin sur {target.character_type} !")
-        target.health += 20              
-        target.health = max(target.health, 50) 
-
+    #print(f"{user.unit_type} utilise Soin sur {target.unit_type} !")
+        target.health += 20              # Ajoute 5 points de vie à la cible
+        target.health = max(target.health, 50)              # Limite la santé au maximum (par exemple 10)
 class UnitWithHealthBar(Unit):
     def __init__(self, x, y, health, max_health, remaining_move,  team, character_type, competences, max_move):
-        
+        # Appeler le constructeur de la classe parente (Unit)
         super().__init__(x, y, max_health, max_move, remaining_move, health,  team, character_type, competences)
         
-        
-        self.remaining_move = remaining_move  
-        self.max_move = max_move  
+        # Initialiser les attributs spécifiques à UnitWithHealthBar
+        self.remaining_move = remaining_move  # Déplacements restants
+        self.max_move = max_move  # Ajout de max_move dans l'initialisation
 
     def draw(self, screen):
         
         # Couleurs pour chaque équipe
         team_colors = {
-            'player1': GREEN,  
-            'player2': PURPLE    
+            'player1': GREEN,  # Couleur du joueur 1
+            'player2': PURPLE    # Couleur du joueur 2
         }
 
         # Dessiner le contour coloré
-        team_color = team_colors.get(self.team, WHITE)  # Blanc par défaut 
+        team_color = team_colors.get(self.team, WHITE)  # Blanc par défaut si l'équipe n'est pas reconnue
         pygame.draw.rect(
             screen,
             team_color,
             (
-                self.x * CELL_SIZE - 2, 
+                self.x * CELL_SIZE - 2,  # Légèrement plus grand que l'unité
                 self.y * CELL_SIZE - 2,
                 CELL_SIZE + 4,
                 CELL_SIZE + 4
@@ -212,9 +200,11 @@ class UnitWithHealthBar(Unit):
             fire_y = fire_tile[1] * CELL_SIZE
             screen.blit(fire_image, (fire_x, fire_y))
      
-    # dessiner les cases à l'abris
+    # case à l'abris
         for safe_tile in SHELTER_TILES:
             safe_x = safe_tile[0] * CELL_SIZE
             safe_y = safe_tile[1] * CELL_SIZE
             screen.blit(safe_image, (safe_x, safe_y))            
-  
+    # Méthode d'attaque
+
+

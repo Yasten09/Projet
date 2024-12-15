@@ -23,9 +23,7 @@ PURPLE = (128, 0, 128)
 
 
 class CharacterSelectionMenu:
-    """
-    Classe pour gérer la sélection des personnages pour chaque joueur.
-    """
+
     def __init__(self, screen, available_characters, character_images, font_size=36):
 
         self.screen = screen
@@ -41,7 +39,8 @@ class CharacterSelectionMenu:
         image_rect = imageb.get_rect(center=(WIDTH // 2, HEIGHT//2))
         self.screen.blit(imageb, image_rect)
         selected_characters = []
-        for i in range(2):  # Chaque joueur choisit 2 personnages
+        for i in range(3):  # Chaque joueur choisit 2 personnages
+            self.screen.blit(imageb, image_rect)
             selecting = True
             selected_index = 0  # Indice du personnage actuellement surligné
 
@@ -49,11 +48,20 @@ class CharacterSelectionMenu:
             
 
                 # Afficher le titre
+                self.screen.fill(BLACK)
+                
                 title_text = self.font.render(
-                    f"{player_name} - Sélectionnez le personnage {i + 1}", True, WHITE
+                    f"{player_name} - Sélectionnez le personnage {i + 1} ", True, WHITE
                 )
                 self.screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, 50))
-
+                imagea = pygame.image.load("images/FondNaruto4.png")
+                imageb = pygame.transform.scale(imagea, (960, 760))
+                image_rect = imageb.get_rect(center=(WIDTH // 2, HEIGHT//2))
+                self.screen.blit(imageb, image_rect)
+                title_text = self.font.render(
+                    f"{player_name} - Sélectionnez le personnage {i + 1} ", True, WHITE
+                )
+                self.screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, 50))
                 # Afficher chaque personnage avec son image et son nom
                 for index, character in enumerate(self.available_characters):
                     x_pos = 100

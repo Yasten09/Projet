@@ -23,9 +23,6 @@ PURPLE = (128, 0, 128)
 
 
 class Competence:
-    """
-    Classe pour représenter une compétence.
-    """
     def __init__(self, name, range, area,attack_power):
         self.name = name
         self.range = range
@@ -39,7 +36,6 @@ class FastMove(Competence):
         super().__init__(name="Fast Move", range=0, area=[],attack_power=0)
 
     def apply(self, unit, dx, dy):
-        """Applique la compétence Fast Move : déplace l'unité de 3 cases dans la direction spécifiée (dx, dy)."""
         # Déplace l'unité de 3 cases dans la direction donnée (dx, dy)
         isFastMove=True
         for _ in range(3):  # Déplace l'unité de 3 cases
